@@ -7,6 +7,7 @@ const Phase1 = (() => {
   let currentScanReadings = null;
   let bestPlanets = [];     // planets evaluated during this run (for "Return to Best")
   let planetPanelEl = null;
+  let bgCanvasEl = null;
   let onTransition = null;  // callback(ship, planet) → triggers Phase 2
 
   // ---- Utility ----
@@ -36,12 +37,21 @@ const Phase1 = (() => {
     return false;
   }
 
-  // ---- Jump: pick event, present choices ----
+  // ---- Jump: play warp animation then pick event, present choices ----
 
   function doJump(isReturn = false) {
     if (checkGameOver()) return;
     ship.turnsElapsed += 1;
 
+    // Play warp animation before revealing event/planet
+    if (bgCanvasEl) {
+      Renderer.playWarpAnimation(bgCanvasEl, () => _resolveJump(isReturn));
+    } else {
+      _resolveJump(isReturn);
+    }
+  }
+
+  function _resolveJump(isReturn) {
     const event = Events.pickCrossingEvent(ship);
     if (!event) { arriveAtPlanet(); return; }
 
@@ -253,7 +263,7 @@ const Phase1 = (() => {
   function showOpeningNarrative(callback) {
     const lines = [
       'And when they knew the Earth was doomed, they built a ship.',
-      'One thousand colonists in hibernation. The accumulated knowledge of a civilization. A chance.',
+      'Eight hundred colonists in hibernation. The accumulated knowledge of a civilization. A chance.',
       'You are the ship\'s AI. You have been watching over them for eleven years.',
       'The stars ahead hold no guarantees. Some of what you find will be survivable. Some will not.',
       'The mission is to find a world. Then to keep them alive on it.',
@@ -276,9 +286,10 @@ const Phase1 = (() => {
 
   // ---- Init / start ----
 
-  function start({ shipState, planetPanelElement, transitionCallback }) {
+  function start({ shipState, planetPanelElement, transitionCallback, bgCanvas }) {
     ship = shipState;
     planetPanelEl = planetPanelElement;
+    bgCanvasEl = bgCanvas || document.getElementById('bg-canvas');
     onTransition = transitionCallback;
     bestPlanets = [];
 

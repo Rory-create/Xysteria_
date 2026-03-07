@@ -47,9 +47,9 @@ const Phase2 = (() => {
 
       // Resources
       resources: {
-        food: 50,
-        power: 20 + energyStockpile,
-        materials: 40,
+        food: 30,
+        power: 15 + energyStockpile,
+        materials: 22,
         science_pts: 0,
       },
 
@@ -232,8 +232,8 @@ const Phase2 = (() => {
       }
 
       // Random hostile life losses
-      if (h.randomColonistLoss && Math.random() > 0.6) {
-        const lost = 5 + Math.floor(Math.random() * 15);
+      if (h.randomColonistLoss && Math.random() > 0.25) {
+        const lost = 10 + Math.floor(Math.random() * 20);
         gs.population = Math.max(0, gs.population - lost);
         msgs.push(`⚠ Hostile Biosphere: ${lost} colonists lost to creature attacks.`);
       }
@@ -259,7 +259,7 @@ const Phase2 = (() => {
   function applyPopulationGrowth() {
     if (gs.resources.food <= 0) {
       // Starvation
-      const lost = 20 + Math.floor(Math.random() * 20);
+      const lost = 40 + Math.floor(Math.random() * 30);
       gs.population = Math.max(0, gs.population - lost);
       return `⚠ Starvation: ${lost} colonists died from food shortage.`;
     }
@@ -277,11 +277,7 @@ const Phase2 = (() => {
   function checkWinConditions() {
     // Survival win: alive at turn 30
     if (gs.turn >= 30) {
-      if (gs.population > 0) {
-        return determineWin();
-      } else {
-        return { win: false, type: 'death', message: 'The colony could not sustain itself.' };
-      }
+      return determineWin();
     }
 
     // Early win conditions
@@ -303,9 +299,15 @@ const Phase2 = (() => {
   }
 
   function determineWin() {
-    const startPop = gs.log.find(l => l.startPop)?.startPop || 1000;
-    if (gs.population >= startPop * 1.5) {
-      return { win: true, type: 'thriving', message: 'The colony is thriving. Population has grown significantly.' };
+    const startPop = gs.log.find(l => l.startPop)?.startPop || 800;
+    if (gs.population <= 0) {
+      return { win: false, type: 'death', message: 'The colony perished.' };
+    }
+    if (gs.population < startPop * 0.4) {
+      return { win: false, type: 'death', message: 'Too many were lost. The colony could not sustain itself.' };
+    }
+    if (gs.population >= startPop * 2.0) {
+      return { win: true, type: 'thriving', message: 'The colony is thriving. Population has more than doubled.' };
     }
     return { win: true, type: 'survival', message: 'The colony has survived 30 years on ' + gs.planet.name + '.' };
   }

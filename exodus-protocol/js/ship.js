@@ -9,16 +9,16 @@ const Ship = (() => {
 
     return {
       colonists: {
-        alive: 1000 + colonistBonus,
-        max: 1000 + colonistBonus,
+        alive: 800 + colonistBonus,
+        max: 800 + colonistBonus,
       },
       knowledge: {
-        science: Math.min(100, 100 + Math.round(100 * scienceBonus)),
-        culture: 100,
-        engineering: 100,
+        science: Math.min(100, 60 + Math.round(100 * scienceBonus)),
+        culture: 60,
+        engineering: 60,
       },
-      hull: 100,
-      power: 100,
+      hull: 85,
+      power: 85,
       probes: 5,
       relics: [],           // array of relic ids found during The Crossing
       log: [],              // narrative history [{turn, text}]
@@ -69,7 +69,7 @@ const Ship = (() => {
   // ---- Severity multiplier for events ----
 
   function severityMultiplier(ship) {
-    return 1 + ship.planetsVisited * 0.1;
+    return 1 + ship.planetsVisited * 0.18;
   }
 
   // ---- Serialize / deserialize (for save system) ----

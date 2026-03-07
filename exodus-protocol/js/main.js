@@ -182,11 +182,11 @@ const GameMain = (() => {
     if (mode === 'crossing') {
       Renderer.drawStarfield(bgCtx, bgCanvas.width, bgCanvas.height, Math.random() * 99999);
     } else if (mode === 'landfall') {
-      bgCtx.fillStyle = '#08080f';
-      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-      // Draw planet in corner
-      const r = Math.min(bgCanvas.width, bgCanvas.height) * 0.3;
-      Renderer.drawPlanetFallback(bgCtx, bgCanvas.width - r - 20, r + 20, r, grade || 'C');
+      Renderer.drawStarfield(bgCtx, bgCanvas.width, bgCanvas.height, Math.floor(Math.random() * 99999));
+      // Draw planet in top-right corner
+      const r = Math.min(bgCanvas.width, bgCanvas.height) * 0.28;
+      const planetDesc = { grade: grade || 'C' };
+      Renderer.drawPlanet(bgCtx, bgCanvas.width - r - 10, r + 10, r, planetDesc);
     }
   }
 

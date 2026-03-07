@@ -6,7 +6,7 @@
 const EventsCrossing = [
   {
     id: 'radiation_storm',
-    weight: 20,
+    weight: 25,
     label: 'Radiation Storm',
     narratives: [
       'A wave of ionizing radiation sweeps through the ship. Warning klaxons scream. The colonists sleep on, unaware.',
@@ -62,7 +62,7 @@ const EventsCrossing = [
 
   {
     id: 'asteroid_field',
-    weight: 18,
+    weight: 20,
     label: 'Asteroid Field',
     narratives: [
       'A dense field of debris — the remnants of a shattered moon — lies directly in your path.',
@@ -120,7 +120,7 @@ const EventsCrossing = [
 
   {
     id: 'relic_signal',
-    weight: 12,
+    weight: 14,
     label: 'Alien Signal Detected',
     narratives: [
       'Deep radar picks up a structure — geometric, crystalline, decidedly non-natural — adrift nearby.',
@@ -191,7 +191,7 @@ const EventsCrossing = [
 
   {
     id: 'cryo_malfunction',
-    weight: 14,
+    weight: 18,
     label: 'Cryo Chamber Failure',
     narratives: [
       'A bank of hibernation pods begins to warm. The colonists inside stir toward wakefulness with nowhere to go.',
@@ -247,7 +247,7 @@ const EventsCrossing = [
 
   {
     id: 'cultural_schism',
-    weight: 10,
+    weight: 12,
     label: 'Ideological Conflict in the Archives',
     narratives: [
       'Your cultural subroutines flag a critical inconsistency: rival historical records in the archive are contradicting each other.',
@@ -299,7 +299,7 @@ const EventsCrossing = [
 
   {
     id: 'gravitational_anomaly',
-    weight: 11,
+    weight: 13,
     label: 'Gravitational Anomaly',
     narratives: [
       'A rogue planet — invisible, lightless — bends your trajectory. You are caught in its wake.',
@@ -362,7 +362,7 @@ const EventsCrossing = [
 
   {
     id: 'solar_flare',
-    weight: 15,
+    weight: 20,
     label: 'Solar Flare',
     narratives: [
       'The target star ahead flares without warning. A wall of plasma crosses the distance in minutes.',
@@ -428,7 +428,7 @@ const EventsCrossing = [
 
   {
     id: 'peaceful_jump',
-    weight: 30,
+    weight: 10,
     label: null,  // null label = no event popup, just narrative blurb
     narratives: [
       'The jump passes in silence. Stars slide past. The colonists sleep.',

@@ -280,7 +280,7 @@ const Planet = (() => {
         id: 'water_scarcity',
         label: 'Water Scarcity',
         desc: 'Colonists lose 5/turn without Water Recycler. All crop yields halved.',
-        colonistDecay: 5, cropMod: 0.5, mitigation: 'water_recycler', urgent: true,
+        colonistDecay: 12, cropMod: 0.5, mitigation: 'water_recycler', urgent: true,
       });
     }
 

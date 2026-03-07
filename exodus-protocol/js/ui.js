@@ -192,16 +192,21 @@ const UI = (() => {
     if (!containerEl) return;
     const { name, grade, attributes, class: cls } = planetDesc;
 
-    const gradeColor = { A: '#4ce9a0', B: '#7cf0a0', C: '#f0c040', D: '#f07840', F: '#e94560' };
+    const gradeColor  = { A: '#4ce9a0', B: '#7cf0a0', C: '#f0c040', D: '#f07840', F: '#e94560' };
+    const gradeBg     = { A: '#1a4a30', B: '#1e3a28', C: '#3a3010', D: '#3a2010', F: '#3a0e18' };
     const color = gradeColor[grade] || '#fff';
+    const bgCol = gradeBg[grade] || '#222';
 
     containerEl.innerHTML = `
-      <div class="planet-name">${name} <span class="planet-grade" style="color:${color}">Grade ${grade}</span></div>
+      <canvas id="planet-portrait" width="96" height="96"></canvas>
+      <div class="planet-name">${name}
+        <span class="planet-grade-badge" style="background:${bgCol};color:${color}">Grade ${grade}</span>
+      </div>
       <div class="planet-class">Class: ${cls}</div>
       <div class="planet-attrs">
         ${Object.entries(attributes).map(([key, attr]) => `
           <div class="planet-attr">
-            <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)}</div>
+            <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)} <span class="attr-value-num">${attr.value}</span></div>
             <div class="attr-bar-wrap">
               <div class="attr-bar" style="width:${attr.value}%;background:${attrColor(key, attr.value)}"></div>
             </div>
@@ -210,6 +215,13 @@ const UI = (() => {
         `).join('')}
       </div>
     `;
+
+    // Draw planet portrait
+    const portraitCanvas = containerEl.querySelector('#planet-portrait');
+    if (portraitCanvas) {
+      const ctx = portraitCanvas.getContext('2d');
+      Renderer.drawPlanet(ctx, 48, 48, 40, planetDesc);
+    }
   }
 
   function attrColor(key, val) {
