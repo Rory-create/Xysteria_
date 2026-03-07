@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Sprite Designer</title>
+  <link rel="stylesheet" href="css/designer.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== TOP TOOLBAR ===== -->
+  <header id="toolbar">
+    <h1>✦ Sprite Designer</h1>
+
+    <!-- File ops -->
+    <button class="action-btn success" id="new-sprite">New</button>
+    <button class="action-btn" id="export-json">Save JSON</button>
+    <button class="action-btn" id="export-png">Export PNG</button>
+    <button class="action-btn" id="export-strip">Export Strip</button>
+    <label class="action-btn" style="cursor:pointer">
+      Import JSON
+      <input type="file" id="import-file" accept=".json" style="display:none">
+    </label>
+
+    <div class="toolbar-sep"></div>
+
+    <!-- Sprite name -->
+    <input type="text" id="sprite-name" value="untitled" placeholder="Sprite name">
+
+    <div class="toolbar-sep"></div>
+
+    <!-- Canvas size presets -->
+    <label style="color:var(--text-dim);font-size:11px">Size:</label>
+    <select id="size-select">
+      <option value="8">8×8 (8-bit)</option>
+      <option value="16" selected>16×16 (16-bit)</option>
+      <option value="32">32×32 (32-bit)</option>
+      <option value="64">64×64 (64-bit)</option>
+      <option value="128">128×128</option>
+      <option value="custom">Custom…</option>
+    </select>
+    <div id="custom-size-row">
+      <input type="number" id="custom-w" value="24" min="1" max="256" style="width:50px">
+      <span style="color:var(--text-dim)">×</span>
+      <input type="number" id="custom-h" value="24" min="1" max="256" style="width:50px">
+      <button class="action-btn" id="apply-custom-size">Apply</button>
+    </div>
+
+    <div class="toolbar-sep"></div>
+
+    <!-- Grid & Zoom -->
+    <button class="action-btn" id="toggle-grid">Grid: On</button>
+    <button class="action-btn" id="zoom-out">−</button>
+    <button class="action-btn" id="zoom-reset">1:1</button>
+    <button class="action-btn" id="zoom-in">+</button>
+
+    <div class="toolbar-sep"></div>
+
+    <!-- Keyboard hints -->
+    <span style="color:var(--text-dim);font-size:11px">P·E·F·I·L·R | G=grid | scroll=zoom | Alt+drag=pan</span>
+  </header>
+
+  <!-- ===== LEFT PANEL — Tools ===== -->
+  <aside id="left-panel">
+    <div class="panel-label">Tools</div>
+    <div class="tool-grid">
+      <button class="tool-btn" data-tool="pencil" title="Pencil (P)">✏️ Pencil</button>
+      <button class="tool-btn" data-tool="eraser" title="Eraser (E)">🧹 Eraser</button>
+      <button class="tool-btn" data-tool="fill"   title="Fill (F)">🪣 Fill</button>
+      <button class="tool-btn" data-tool="eyedropper" title="Eyedropper (I)">💉 Pick</button>
+      <button class="tool-btn" data-tool="line"   title="Line (L)">╱ Line</button>
+      <button class="tool-btn" data-tool="rect"   title="Rectangle (R)">▭ Rect</button>
+    </div>
+
+    <div class="toolbar-sep" style="width:100%;height:1px;margin:4px 0"></div>
+
+    <div class="panel-label">Active Color</div>
+    <div id="active-color-preview" style="width:100%;height:32px;border:1px solid var(--border);border-radius:4px;background:repeating-conic-gradient(#888 0% 25%,#ccc 0% 50%) 0 0/8px 8px;position:relative;">
+      <div id="active-color-overlay" style="position:absolute;inset:0;border-radius:3px;"></div>
+    </div>
+
+    <div class="toolbar-sep" style="width:100%;height:1px;margin:4px 0"></div>
+
+    <div class="panel-label">Notes</div>
+    <p style="font-size:11px;color:var(--text-dim);line-height:1.5">
+      Drag JSON here to import.<br>
+      Middle-click or Alt+drag to pan.<br>
+      Scroll wheel to zoom.<br>
+      Double-click frame label to rename.<br>
+      Click frame duration to edit (ms).
+    </p>
+  </aside>
+
+  <!-- ===== CANVAS AREA ===== -->
+  <main id="canvas-area">
+    <canvas id="main-canvas"></canvas>
+    <canvas id="overlay-canvas"></canvas>
+  </main>
+
+  <!-- ===== RIGHT PANEL — Palette + Preview ===== -->
+  <aside id="right-panel">
+    <div class="panel-label">Preview</div>
+    <canvas id="preview-canvas" width="120" height="120"></canvas>
+
+    <div class="panel-label">Palette <span style="color:var(--text-dim);font-size:10px">(dbl-click to edit)</span></div>
+    <div id="palette-container"></div>
+
+    <!-- Hidden native color picker -->
+    <input type="color" id="hidden-color-input" style="display:none">
+  </aside>
+
+  <!-- ===== BOTTOM PANEL — Frame List ===== -->
+  <section id="bottom-panel">
+    <div id="frame-toolbar">
+      <span class="panel-label" style="margin:0">Frames</span>
+      <button class="action-btn" id="add-frame">+ Add</button>
+      <button class="action-btn" id="dup-frame">⧉ Dup</button>
+      <button class="action-btn danger" id="del-frame">✕ Del</button>
+      <div class="toolbar-sep"></div>
+      <button class="action-btn" id="play-btn">▶ Play</button>
+      <span style="color:var(--text-dim);font-size:11px;margin-left:6px">Drag frames to reorder · dbl-click label to rename</span>
+    </div>
+    <div id="frame-list"></div>
+  </section>
+
+</div>
+
+<script src="js/state.js"></script>
+<script src="js/canvas.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/palette.js"></script>
+<script src="js/animation.js"></script>
+<script src="js/export.js"></script>
+<script src="js/main.js"></script>
+
+<script>
+  // Sync active color preview box with state
+  function syncActiveColorPreview() {
+    const overlay = document.getElementById('active-color-overlay');
+    if (!overlay) return;
+    const hex = State.palette[State.activePaletteIndex] || '#00000000';
+    overlay.style.background = Canvas.paletteColorToCss(hex);
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    State.subscribe(syncActiveColorPreview);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+/* Sprite Designer — dark theme, three-panel layout */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg0: #0d0d14;
+  --bg1: #13131f;
+  --bg2: #1a1a2e;
+  --bg3: #242438;
+  --accent: #7c5cbf;
+  --accent2: #a07cf0;
+  --text: #d4d4e8;
+  --text-dim: #7a7a9a;
+  --border: #2e2e4a;
+  --danger: #e94560;
+  --success: #4ce9a0;
+  --panel-w: 220px;
+  --toolbar-h: 42px;
+  --frame-panel-h: 160px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg0);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+/* ---- App shell ---- */
+#app {
+  display: grid;
+  grid-template-rows: var(--toolbar-h) 1fr var(--frame-panel-h);
+  grid-template-columns: var(--panel-w) 1fr var(--panel-w);
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ---- Top toolbar (spans all columns) ---- */
+#toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+#toolbar h1 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent2);
+  margin-right: 12px;
+  white-space: nowrap;
+}
+
+/* ---- Tool buttons ---- */
+.tool-btn, .action-btn {
+  padding: 4px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.tool-btn:hover, .action-btn:hover {
+  background: var(--bg3);
+  border-color: var(--accent);
+}
+
+.tool-btn.active {
+  background: var(--accent);
+  border-color: var(--accent2);
+  color: #fff;
+}
+
+.action-btn.danger { border-color: var(--danger); color: var(--danger); }
+.action-btn.success { border-color: var(--success); color: var(--success); }
+
+.toolbar-sep {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+select, input[type="number"], input[type="text"] {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+select:focus, input:focus { outline: 1px solid var(--accent); }
+
+#sprite-name { width: 120px; }
+
+#custom-size-row {
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+#custom-size-row input { width: 52px; }
+
+/* ---- Left panel — tools + zoom ---- */
+#left-panel {
+  grid-row: 2;
+  grid-column: 1;
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 8px;
+  overflow-y: auto;
+}
+
+.panel-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+/* ---- Canvas area ---- */
+#canvas-area {
+  grid-row: 2;
+  grid-column: 2;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg2);
+  cursor: crosshair;
+}
+
+#main-canvas, #overlay-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+#overlay-canvas {
+  pointer-events: none;
+}
+
+/* ---- Right panel — palette + preview ---- */
+#right-panel {
+  grid-row: 2;
+  grid-column: 3;
+  background: var(--bg1);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 8px;
+  overflow-y: auto;
+}
+
+/* ---- Preview canvas ---- */
+#preview-canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 120px;
+  image-rendering: pixelated;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* ---- Palette ---- */
+#palette-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.palette-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s;
+  flex-shrink: 0;
+}
+
+.palette-swatch:hover { transform: scale(1.15); border-color: var(--text-dim); }
+.palette-swatch.active { border-color: #fff; box-shadow: 0 0 0 1px var(--accent); }
+
+.palette-swatch.transparent {
+  background: repeating-conic-gradient(#888 0% 25%, #ccc 0% 50%) 0 0 / 8px 8px;
+}
+
+.palette-swatch.add-btn {
+  background: var(--bg3);
+  border: 2px dashed var(--border);
+  color: var(--text-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+.palette-swatch.add-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+/* ---- Bottom panel — frame list ---- */
+#bottom-panel {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  background: var(--bg1);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+#frame-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#frame-list {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  padding: 6px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  align-items: center;
+}
+
+.frame-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 2px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.frame-item:hover { border-color: var(--accent); }
+.frame-item.active { border-color: var(--accent2); background: var(--bg3); }
+.frame-item.drag-over { border-color: var(--success); background: rgba(76,233,160,0.08); }
+
+.frame-item canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.frame-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.frame-label-input {
+  font-size: 10px;
+  width: 64px;
+}
+
+.frame-duration {
+  font-size: 9px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.frame-duration:hover { color: var(--accent2); text-decoration: underline; }
+
+/* ---- Misc ---- */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg1); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }

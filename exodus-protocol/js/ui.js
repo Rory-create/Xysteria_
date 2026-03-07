@@ -1,0 +1,404 @@
+// UI module — narrative feed, choice buttons, HUD updates, panels.
+
+const UI = (() => {
+
+  // ---- DOM references (set on init) ----
+  let narrativeEl, choicesEl, hudEl, phaseIndicatorEl;
+
+  // ---- Narrative log ----
+
+  let narrativeQueue = [];
+
+  function addNarrative(text, className = '') {
+    if (!narrativeEl) return;
+    const p = document.createElement('p');
+    p.className = 'narrative-line' + (className ? ' ' + className : '');
+    // Animate in
+    p.style.opacity = '0';
+    p.innerHTML = text;
+    narrativeEl.appendChild(p);
+    narrativeEl.scrollTop = narrativeEl.scrollHeight;
+    requestAnimationFrame(() => {
+      p.style.transition = 'opacity 0.4s';
+      p.style.opacity = '1';
+    });
+  }
+
+  function clearNarrative() {
+    if (narrativeEl) narrativeEl.innerHTML = '';
+  }
+
+  function addSeparator(label = '') {
+    if (!narrativeEl) return;
+    const div = document.createElement('div');
+    div.className = 'narrative-separator';
+    div.textContent = label;
+    narrativeEl.appendChild(div);
+    narrativeEl.scrollTop = narrativeEl.scrollHeight;
+  }
+
+  // ---- Choice buttons ----
+
+  function showChoices(choices, onSelect) {
+    if (!choicesEl) return;
+    choicesEl.innerHTML = '';
+
+    if (!choices || choices.length === 0) {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = 'Continue';
+      btn.addEventListener('click', () => { choicesEl.innerHTML = ''; onSelect(null); });
+      choicesEl.appendChild(btn);
+      return;
+    }
+
+    choices.forEach((choice, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `<span class="choice-num">${idx + 1}.</span> ${choice.label}`;
+      if (choice.condition && !choice.condition) btn.disabled = true;
+      btn.addEventListener('click', () => {
+        choicesEl.innerHTML = '';
+        onSelect(choice);
+      });
+      choicesEl.appendChild(btn);
+    });
+  }
+
+  function showContinueButton(label, onClick) {
+    showChoices(null, onClick);
+    if (choicesEl && choicesEl.firstChild) {
+      choicesEl.firstChild.textContent = label || 'Continue';
+    }
+  }
+
+  function clearChoices() {
+    if (choicesEl) choicesEl.innerHTML = '';
+  }
+
+  // ---- HUD / stat bars ----
+
+  function updateHUD(ship, planetsVisited) {
+    if (!hudEl) return;
+
+    const pct = (val, max = 100) => Math.max(0, Math.min(100, Math.round((val / max) * 100)));
+
+    hudEl.innerHTML = `
+      <div class="hud-section">
+        <div class="hud-label">Colonists</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar colonists" style="width:${pct(ship.colonists.alive, ship.colonists.max)}%"></div>
+        </div>
+        <div class="hud-value">${ship.colonists.alive.toLocaleString()} / ${ship.colonists.max.toLocaleString()}</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Hull</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar hull" style="width:${pct(ship.hull)}%"></div>
+        </div>
+        <div class="hud-value">${Math.round(ship.hull)}%</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Power</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar power" style="width:${pct(ship.power)}%"></div>
+        </div>
+        <div class="hud-value">${Math.round(ship.power)}%</div>
+      </div>
+
+      <div class="hud-divider"></div>
+
+      <div class="hud-section">
+        <div class="hud-label">Science DB</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar science" style="width:${pct(ship.knowledge.science)}%"></div>
+        </div>
+        <div class="hud-value">${Math.round(ship.knowledge.science)}%</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Culture DB</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar culture" style="width:${pct(ship.knowledge.culture)}%"></div>
+        </div>
+        <div class="hud-value">${Math.round(ship.knowledge.culture)}%</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Engineering DB</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar engineering" style="width:${pct(ship.knowledge.engineering)}%"></div>
+        </div>
+        <div class="hud-value">${Math.round(ship.knowledge.engineering)}%</div>
+      </div>
+
+      <div class="hud-divider"></div>
+
+      <div class="hud-stat">🔭 Probes: <strong>${ship.probes}</strong></div>
+      <div class="hud-stat">🌌 Planets scanned: <strong>${planetsVisited}</strong></div>
+      ${ship.relics.length > 0 ? `<div class="hud-stat">💎 Relics: <strong>${ship.relics.length}</strong></div>` : ''}
+    `;
+  }
+
+  // ---- Phase 2 HUD ----
+
+  function updateLandfallHUD(gs) {
+    if (!hudEl) return;
+    const { resources, population, morale, turn, planet } = gs;
+
+    hudEl.innerHTML = `
+      <div class="hud-section">
+        <div class="hud-label">Population</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar colonists" style="width:${Math.min(100, (population / gs.populationCap) * 100)}%"></div>
+        </div>
+        <div class="hud-value">${population.toLocaleString()} / ${gs.populationCap}</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Morale</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar culture" style="width:${morale}%"></div>
+        </div>
+        <div class="hud-value">${morale}%</div>
+      </div>
+
+      <div class="hud-divider"></div>
+
+      <div class="hud-stat">🌾 Food: <strong>${resources.food}</strong></div>
+      <div class="hud-stat">⚡ Power: <strong>${resources.power}</strong></div>
+      <div class="hud-stat">🪨 Materials: <strong>${resources.materials}</strong></div>
+      <div class="hud-stat">🔬 Research: <strong>${resources.science_pts}</strong></div>
+
+      <div class="hud-divider"></div>
+
+      <div class="hud-stat">📅 Turn: <strong>${turn}</strong> / 30</div>
+      <div class="hud-stat">🌍 Planet: <strong>${planet.name}</strong> (${planet.grade})</div>
+
+      <div class="hud-divider"></div>
+
+      <div class="hud-label">Tech Access</div>
+      <div class="hud-stat">🔬 Science: <strong>${Math.round(gs.techAccess.science)}%</strong></div>
+      <div class="hud-stat">📚 Culture: <strong>${Math.round(gs.techAccess.culture)}%</strong></div>
+      <div class="hud-stat">⚙️ Engineering: <strong>${Math.round(gs.techAccess.engineering)}%</strong></div>
+    `;
+  }
+
+  // ---- Planet scan panel ----
+
+  function renderPlanetPanel(planetDesc, containerEl) {
+    if (!containerEl) return;
+    const { name, grade, attributes, class: cls } = planetDesc;
+
+    const gradeColor = { A: '#4ce9a0', B: '#7cf0a0', C: '#f0c040', D: '#f07840', F: '#e94560' };
+    const color = gradeColor[grade] || '#fff';
+
+    containerEl.innerHTML = `
+      <div class="planet-name">${name} <span class="planet-grade" style="color:${color}">Grade ${grade}</span></div>
+      <div class="planet-class">Class: ${cls}</div>
+      <div class="planet-attrs">
+        ${Object.entries(attributes).map(([key, attr]) => `
+          <div class="planet-attr">
+            <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)}</div>
+            <div class="attr-bar-wrap">
+              <div class="attr-bar" style="width:${attr.value}%;background:${attrColor(key, attr.value)}"></div>
+            </div>
+            <div class="attr-label-detail">${attr.label} — <em>${attr.desc}</em></div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function attrColor(key, val) {
+    // Green = good, red = bad (heuristic per attribute)
+    if (key === 'gravity' || key === 'temperature') {
+      // Mid-range is best
+      const dist = Math.abs(val - 50);
+      const pct = 1 - dist / 50;
+      return `hsl(${Math.round(pct * 120)}, 70%, 45%)`;
+    }
+    return `hsl(${Math.round(val * 1.2)}, 70%, 45%)`;
+  }
+
+  // ---- Building panel (Phase 2) ----
+
+  function renderBuildingPanel(gs, containerEl, onBuild) {
+    if (!containerEl) return;
+    const allBuildings = BuildingDefs;
+    const available = allBuildings.filter(b =>
+      gs.unlockedBuildings.includes(b.id) &&
+      !b.unique // non-unique can be built multiple times
+    );
+
+    containerEl.innerHTML = '<div class="panel-section-label">Build</div>';
+
+    if (available.length === 0) {
+      containerEl.innerHTML += '<p class="dim-text">No buildings available. Research techs first.</p>';
+      return;
+    }
+
+    available.forEach(bdef => {
+      const canAfford = Object.entries(bdef.cost).every(([res, amt]) =>
+        (gs.resources[res] || 0) >= amt
+      );
+      const div = document.createElement('div');
+      div.className = 'build-item' + (canAfford ? '' : ' disabled');
+      div.innerHTML = `
+        <span class="build-icon">${bdef.icon}</span>
+        <div class="build-info">
+          <div class="build-label">${bdef.label}</div>
+          <div class="build-cost">${Object.entries(bdef.cost).map(([k,v]) => `${v} ${k}`).join(', ')}</div>
+          <div class="build-desc">${bdef.desc}</div>
+        </div>
+        <button class="build-btn" ${canAfford ? '' : 'disabled'}>Build</button>
+      `;
+      div.querySelector('.build-btn').addEventListener('click', () => onBuild(bdef));
+      containerEl.appendChild(div);
+    });
+  }
+
+  // ---- Tech panel (Phase 2) ----
+
+  function renderTechPanel(gs, containerEl, onResearch) {
+    if (!containerEl) return;
+    const allNodes = [...TechTreeBase, ...TechTreeRelics];
+    const available = Tech.getAvailableNodes(
+      gs.researchedTech,
+      gs.techAccess,
+      gs.relics,
+      allNodes
+    );
+
+    containerEl.innerHTML = '<div class="panel-section-label">Research</div>';
+
+    const canAffordPts = (node) => gs.resources.science_pts >= node.cost_research_points;
+
+    if (available.length === 0) {
+      containerEl.innerHTML += '<p class="dim-text">No researchable techs available.</p>';
+    }
+
+    available.forEach(node => {
+      const described = Tech.describeNode(node, gs.techAccess);
+      const blocked = described.isBlocked;
+      const affordable = canAffordPts(node);
+      const canResearch = !blocked && affordable;
+
+      const div = document.createElement('div');
+      div.className = 'tech-item' + (canResearch ? '' : ' disabled');
+      div.innerHTML = `
+        <div class="tech-label">${node.label} ${node.requires_relic ? '💎' : ''}</div>
+        <div class="tech-cost">${node.cost_research_points} research pts</div>
+        <div class="tech-desc">${node.desc}</div>
+        ${blocked ? `<div class="tech-blocked">Requires: ${described.blockedReason.join('; ')}</div>` : ''}
+        <button class="tech-btn" ${canResearch ? '' : 'disabled'}>Research</button>
+      `;
+      div.querySelector('.tech-btn').addEventListener('click', () => onResearch(node));
+      containerEl.appendChild(div);
+    });
+
+    // Show researched
+    if (gs.researchedTech.length > 0) {
+      const doneDiv = document.createElement('div');
+      doneDiv.className = 'panel-section-label';
+      doneDiv.style.marginTop = '12px';
+      doneDiv.textContent = 'Researched';
+      containerEl.appendChild(doneDiv);
+      gs.researchedTech.forEach(id => {
+        const node = allNodes.find(n => n.id === id);
+        if (!node) return;
+        const p = document.createElement('p');
+        p.className = 'tech-done';
+        p.textContent = '✓ ' + node.label;
+        containerEl.appendChild(p);
+      });
+    }
+  }
+
+  // ---- Phase indicator ----
+
+  function setPhaseIndicator(text) {
+    if (phaseIndicatorEl) phaseIndicatorEl.textContent = text;
+  }
+
+  // ---- Modal ----
+
+  function showModal(title, body, onClose) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <div class="modal-title">${title}</div>
+        <div class="modal-body">${body}</div>
+        <button class="choice-btn modal-close">Continue</button>
+      </div>
+    `;
+    overlay.querySelector('.modal-close').addEventListener('click', () => {
+      document.body.removeChild(overlay);
+      if (onClose) onClose();
+    });
+    document.body.appendChild(overlay);
+  }
+
+  // ---- Legacy Vault UI ----
+
+  function renderMetaVault(meta, containerEl, onPurchase) {
+    if (!containerEl) return;
+    containerEl.innerHTML = `
+      <div class="vault-header">
+        <span>Legacy Vault</span>
+        <span class="vault-pts">${meta.legacyPoints} Legacy Points</span>
+      </div>
+    `;
+
+    Meta.UPGRADES.forEach(upgrade => {
+      const rank = meta.upgrades[upgrade.id] || 0;
+      const maxed = rank >= upgrade.maxRank;
+      const cost = maxed ? '—' : upgrade.costPerRank[rank];
+      const canAfford = !maxed && meta.legacyPoints >= cost;
+
+      const div = document.createElement('div');
+      div.className = 'vault-item';
+      div.innerHTML = `
+        <div class="vault-label">${upgrade.label} <span class="vault-rank">[${rank}/${upgrade.maxRank}]</span></div>
+        <div class="vault-desc">${upgrade.desc}</div>
+        <button class="choice-btn vault-btn" ${canAfford ? '' : 'disabled'}>
+          ${maxed ? 'Maxed' : `Buy — ${cost} pts`}
+        </button>
+      `;
+      if (canAfford) {
+        div.querySelector('.vault-btn').addEventListener('click', () => onPurchase(upgrade.id));
+      }
+      containerEl.appendChild(div);
+    });
+  }
+
+  // ---- Init ----
+
+  function init({ narrative, choices, hud, phaseIndicator }) {
+    narrativeEl = narrative;
+    choicesEl = choices;
+    hudEl = hud;
+    phaseIndicatorEl = phaseIndicator;
+  }
+
+  return {
+    init,
+    addNarrative,
+    clearNarrative,
+    addSeparator,
+    showChoices,
+    showContinueButton,
+    clearChoices,
+    updateHUD,
+    updateLandfallHUD,
+    renderPlanetPanel,
+    renderBuildingPanel,
+    renderTechPanel,
+    setPhaseIndicator,
+    showModal,
+    renderMetaVault,
+  };
+})();
