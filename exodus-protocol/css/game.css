@@ -79,6 +79,15 @@ html, body {
   margin-bottom: 10px;
 }
 
+.menu-version {
+  font-size: 11px;
+  color: #4c5a6a;
+  letter-spacing: 0.12em;
+  font-family: monospace;
+  margin-bottom: 24px;
+  margin-top: -6px;
+}
+
 #menu-stats {
   font-size: 11px;
   color: var(--text-dim);
