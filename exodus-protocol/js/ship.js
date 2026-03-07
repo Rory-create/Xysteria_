@@ -9,16 +9,16 @@ const Ship = (() => {
 
     return {
       colonists: {
-        alive: 800 + colonistBonus,
-        max: 800 + colonistBonus,
+        alive: 1000 + colonistBonus,
+        max: 1000 + colonistBonus,
       },
       knowledge: {
-        science: Math.min(100, 60 + Math.round(100 * scienceBonus)),
-        culture: 60,
-        engineering: 60,
+        science: Math.min(100, 100 + Math.round(100 * scienceBonus)),
+        culture: 100,
+        engineering: 100,
       },
-      hull: 85,
-      power: 85,
+      hull: 100,
+      power: 100,
       probes: 5,
       relics: [],           // array of relic ids found during The Crossing
       log: [],              // narrative history [{turn, text}]

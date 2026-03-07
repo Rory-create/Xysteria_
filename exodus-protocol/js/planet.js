@@ -112,6 +112,124 @@ const Planet = (() => {
     [75, 100, 'Teeming',      'Life everywhere. Aggressive adaptation expected.'],
   ];
 
+  // ---- Planet anomalies ----
+  // Anomalies are special qualities hidden from initial scans.
+  // Some have a visible hint (unusual readings); all are fully revealed by probe.
+  // phase2Effect carries forward into the colony phase.
+
+  const ANOMALY_POOL = [
+    {
+      id: 'ancient_ruins',
+      label: 'Ancient Ruins',
+      hint: 'Sensors detect unusually regular geometric formations on the surface.',
+      desc: 'Ruins of a non-human civilization. Troves of alien knowledge and cultural data await careful excavation.',
+      positive: true,
+      phase2Effect: { id: 'ancient_ruins', label: 'Ancient Ruins', cultureBonus: 20, desc: 'Alien ruins boost cultural knowledge. Culture DB +20 on arrival.' },
+    },
+    {
+      id: 'crystalline_formations',
+      label: 'Crystalline Formations',
+      hint: 'Anomalous mineral density readings — far beyond what the resource index suggests.',
+      desc: 'Vast crystalline structures with unusual energy properties. A rare industrial windfall.',
+      positive: true,
+      phase2Effect: { id: 'crystalline_formations', label: 'Crystalline Formations', resourceBonus: true, desc: 'Crystalline mineral deposits significantly boost resource extraction.' },
+    },
+    {
+      id: 'subsurface_ocean',
+      label: 'Subsurface Ocean',
+      hint: 'Gravitational micro-variations inconsistent with surface topology.',
+      desc: 'A vast ocean lies beneath the crust. Water scarcity is far less severe than surface readings suggest.',
+      positive: true,
+      phase2Effect: { id: 'subsurface_ocean', label: 'Subsurface Ocean', waterMitigates: true, desc: 'Subsurface ocean accessible via drilling. Water scarcity penalties halved.' },
+    },
+    {
+      id: 'geothermal_vents',
+      label: 'Geothermal Vents',
+      hint: 'Localized thermal spikes in surface temperature readings.',
+      desc: 'Geothermal activity provides a natural power source. Energy requirements reduced from the start.',
+      positive: true,
+      phase2Effect: { id: 'geothermal_vents', label: 'Geothermal Vents', powerBonus: 15, desc: 'Geothermal taps provide free power. Starting power stockpile +15.' },
+    },
+    {
+      id: 'magnetic_shield',
+      label: 'Powerful Magnetosphere',
+      hint: 'Strong EM interference degrading long-range sensor accuracy.',
+      desc: 'An unusually powerful magnetosphere shields colonists from radiation and reduces hostile life spread.',
+      positive: true,
+      phase2Effect: { id: 'magnetic_shield', label: 'Powerful Magnetosphere', radiationShield: true, desc: 'Natural radiation shielding. Hostile biosphere penalties reduced.' },
+    },
+    {
+      id: 'alien_ruins_dangerous',
+      label: 'Dangerous Alien Artifacts',
+      hint: 'Unusual electromagnetic bursts at irregular intervals from the surface.',
+      desc: 'Active alien technology, poorly understood. Potentially valuable — or lethal to colonists who disturb it.',
+      positive: null, // mixed
+      phase2Effect: { id: 'alien_ruins_dangerous', label: 'Dangerous Alien Artifacts', mixed: true, desc: 'Alien artifacts are a double-edged opportunity. Research them or leave them alone.' },
+    },
+    {
+      id: 'unstable_crust',
+      label: 'Unstable Crust',
+      hint: 'Micro-seismic readings inconsistent with the planet\'s estimated geological age.',
+      desc: 'The crust is tectonically unstable. Buildings without reinforcement face periodic collapse risk.',
+      positive: false,
+      phase2Effect: { id: 'unstable_crust', label: 'Unstable Crust', buildingCollapse: true, desc: 'Seismic activity periodically damages structures. Engineering investment critical.' },
+    },
+    {
+      id: 'dormant_pathogen',
+      label: 'Dormant Pathogen',
+      hint: 'Unusual organic compound signatures in surface atmosphere samples.',
+      desc: 'A dormant alien pathogen exists in the soil. Without medical preparation, colonists face epidemic risk within months of landing.',
+      positive: false,
+      phase2Effect: { id: 'dormant_pathogen', label: 'Dormant Pathogen', diseaseRisk: true, desc: 'Alien pathogen will activate. Medical research required or colonist losses begin.' },
+    },
+    {
+      id: 'seismic_activity',
+      label: 'Active Seismic Zones',
+      hint: 'Ground-penetrating radar shows deep stress fractures radiating from multiple epicenters.',
+      desc: 'Regular seismic events will damage structures and injure colonists without engineering mitigation.',
+      positive: false,
+      phase2Effect: { id: 'seismic_activity', label: 'Active Seismic Zones', periodicDamage: true, desc: 'Quakes periodically damage buildings. Seismic Anchoring tech required.' },
+    },
+    {
+      id: 'breathable_pockets',
+      label: 'Breathable Atmosphere Zones',
+      hint: 'Atmospheric composition varies significantly by region — some areas read far better than others.',
+      desc: 'Localized zones with near-breathable air. Settlement in these zones reduces sealed habitat requirements.',
+      positive: true,
+      phase2Effect: { id: 'breathable_pockets', label: 'Breathable Zones', atmCostReduction: true, desc: 'Breathable pockets reduce sealed habitat costs. Building costs −15%.' },
+    },
+  ];
+
+  function generateAnomalies(planet) {
+    // Roll for 0–2 anomalies; excellent/habitable planets more likely to have them
+    const baseChance = planet.class === 'excellent' ? 0.75 :
+                       planet.class === 'habitable'  ? 0.60 :
+                       planet.class === 'marginal'   ? 0.40 :
+                       planet.class === 'barren'     ? 0.25 : 0.20;
+
+    if (Math.random() > baseChance) return [];
+
+    const maxCount = planet.class === 'excellent' || planet.class === 'habitable' ? 2 : 1;
+    const count = Math.random() < 0.35 ? maxCount : 1;
+
+    // Exclude obviously incompatible anomalies
+    const pool = ANOMALY_POOL.filter(a => {
+      if (a.id === 'subsurface_ocean' && planet.water > 40) return false;
+      if (a.id === 'geothermal_vents' && planet.temperature < 30) return false;
+      if (a.id === 'dormant_pathogen' && planet.biosphere < 5) return false;
+      return true;
+    });
+
+    const chosen = [];
+    const available = [...pool];
+    for (let i = 0; i < count && available.length > 0; i++) {
+      const idx = Math.floor(Math.random() * available.length);
+      chosen.push({ ...available[idx] });
+      available.splice(idx, 1);
+    }
+    return chosen;
+  }
+
   function getLabel(value, table) {
     for (const [min, max, label, desc] of table) {
       if (value >= min && value < max) return { label, desc };
@@ -171,9 +289,12 @@ const Planet = (() => {
       ...attrs,
       hostileLife: hasHostileLife,
       surveyed: false,
+      anomalies: [],          // populated below
+      anomaliesRevealed: false,
     };
 
     planet.grade = gradeplanet(planet);
+    planet.anomalies = generateAnomalies(planet);
     return planet;
   }
 
@@ -311,6 +432,8 @@ const Planet = (() => {
       name: planet.name,
       class: planet.class,
       grade: planet.grade,
+      anomalies: planet.anomalies || [],
+      anomaliesRevealed: planet.anomaliesRevealed || false,
       attributes: {
         atmosphere:  { value: readings.atmosphere,  ...atm  },
         gravity:     { value: readings.gravity,      ...grav },
@@ -327,6 +450,8 @@ const Planet = (() => {
     gradeplanet,
     describe,
     getEnvironmentalHardships,
+    generateAnomalies,
+    ANOMALY_POOL,
     getLabel,
     ATM_LABELS, GRAV_LABELS, TEMP_LABELS, WATER_LABELS, RES_LABELS, BIO_LABELS,
   };

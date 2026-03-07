@@ -188,14 +188,38 @@ const UI = (() => {
 
   // ---- Planet scan panel ----
 
-  function renderPlanetPanel(planetDesc, containerEl) {
+  function renderPlanetPanel(planetDesc, containerEl, anomaliesRevealed = false) {
     if (!containerEl) return;
-    const { name, grade, attributes, class: cls } = planetDesc;
+    const { name, grade, attributes, class: cls, anomalies } = planetDesc;
 
     const gradeColor  = { A: '#4ce9a0', B: '#7cf0a0', C: '#f0c040', D: '#f07840', F: '#e94560' };
     const gradeBg     = { A: '#1a4a30', B: '#1e3a28', C: '#3a3010', D: '#3a2010', F: '#3a0e18' };
     const color = gradeColor[grade] || '#fff';
     const bgCol = gradeBg[grade] || '#222';
+
+    // Build anomaly section
+    let anomalyHtml = '';
+    if (anomalies && anomalies.length > 0) {
+      if (anomaliesRevealed) {
+        anomalyHtml = `
+          <div class="planet-anomalies">
+            <div class="anomaly-header">Anomalies Detected</div>
+            ${anomalies.map(a => {
+              const icon = a.positive === true ? '✦' : a.positive === false ? '⚠' : '◈';
+              const cls2 = a.positive === true ? 'anomaly-positive' : a.positive === false ? 'anomaly-negative' : 'anomaly-mixed';
+              return `<div class="anomaly-item ${cls2}">${icon} <strong>${a.label}</strong><br><em>${a.desc}</em></div>`;
+            }).join('')}
+          </div>`;
+      } else {
+        anomalyHtml = `
+          <div class="planet-anomalies">
+            <div class="anomaly-header">Anomalies Detected</div>
+            ${anomalies.map(a =>
+              `<div class="anomaly-item anomaly-unknown">? <strong>Unknown Anomaly</strong><br><em>${a.hint}</em><br><span class="anomaly-probe-hint">Deploy a probe to identify.</span></div>`
+            ).join('')}
+          </div>`;
+      }
+    }
 
     containerEl.innerHTML = `
       <canvas id="planet-portrait" width="96" height="96"></canvas>
@@ -214,6 +238,7 @@ const UI = (() => {
           </div>
         `).join('')}
       </div>
+      ${anomalyHtml}
     `;
 
     // Draw planet portrait

@@ -110,7 +110,14 @@ const Phase1 = (() => {
     UI.addSeparator(`— Planet Detected: ${currentPlanet.name} —`);
     UI.addNarrative(`Sensors resolve a planet. ${ship.knowledge.science < 50 ? 'Readings are imprecise — the science database is damaged.' : 'Readings look reliable.'}`);
 
-    if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl);
+    // Show anomaly hints (visible from orbit even without probe)
+    if (currentPlanet.anomalies && currentPlanet.anomalies.length > 0) {
+      for (const anomaly of currentPlanet.anomalies) {
+        UI.addNarrative(`<span class="narrative-warning">⚠ Unusual reading: ${anomaly.hint}</span>`, 'warning');
+      }
+    }
+
+    if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl, false);
     UI.updateHUD(ship, ship.planetsVisited);
 
     // Assess danger escalation
@@ -179,12 +186,26 @@ const Phase1 = (() => {
     ship.probes -= 1;
     currentScanReadings = { ...currentPlanet }; // exact readings
     currentPlanet.surveyed = true;
+    currentPlanet.anomaliesRevealed = true;
     currentPlanet.grade = Planet.gradeplanet(currentPlanet);
 
     const planetDesc = Planet.describe(currentPlanet, currentScanReadings);
-    if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl);
+    if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl, true);
 
     UI.addNarrative(`Probe deployed. Full sensor sweep complete. Readings are now exact.`);
+
+    // Reveal anomalies
+    if (currentPlanet.anomalies && currentPlanet.anomalies.length > 0) {
+      UI.addNarrative(`<span class="narrative-separator">— Anomaly Report —</span>`);
+      for (const anomaly of currentPlanet.anomalies) {
+        const icon = anomaly.positive === true ? '✦' : anomaly.positive === false ? '⚠' : '◈';
+        const cls  = anomaly.positive === true ? 'narrative-relic' : anomaly.positive === false ? 'narrative-critical' : 'narrative-warning';
+        UI.addNarrative(`<span class="${cls}">${icon} ${anomaly.label}: ${anomaly.desc}</span>`);
+      }
+    } else {
+      UI.addNarrative(`Probe finds no significant anomalies beyond the standard readings.`);
+    }
+
     UI.updateHUD(ship, ship.planetsVisited);
 
     showPlanetChoices(planetDesc);
@@ -222,7 +243,7 @@ const Phase1 = (() => {
       : Ship.scanPlanet(best, ship.knowledge.science);
 
     const planetDesc = Planet.describe(currentPlanet, currentScanReadings);
-    if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl);
+    if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl, best.anomaliesRevealed);
 
     UI.addSeparator(`— Returning to ${best.name} —`);
     UI.addNarrative(`You arrive back at ${best.name}. ${best.surveyed ? 'Probe data is still reliable.' : 'Time and sensor drift may have changed the readings.'}`);
@@ -263,7 +284,7 @@ const Phase1 = (() => {
   function showOpeningNarrative(callback) {
     const lines = [
       'And when they knew the Earth was doomed, they built a ship.',
-      'Eight hundred colonists in hibernation. The accumulated knowledge of a civilization. A chance.',
+      'A thousand colonists in hibernation. The accumulated knowledge of a civilization. A chance.',
       'You are the ship\'s AI. You have been watching over them for eleven years.',
       'The stars ahead hold no guarantees. Some of what you find will be survivable. Some will not.',
       'The mission is to find a world. Then to keep them alive on it.',
