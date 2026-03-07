@@ -6,7 +6,7 @@ const Planet = (() => {
   // Each defines probability ranges [min, max] for each attribute.
   const PLANET_CLASSES = {
     excellent: {
-      weight: 8,
+      weight: 5,
       ranges: {
         atmosphere:  [65, 95],
         gravity:     [40, 70],
@@ -17,7 +17,7 @@ const Planet = (() => {
       },
     },
     habitable: {
-      weight: 20,
+      weight: 15,
       ranges: {
         atmosphere:  [40, 80],
         gravity:     [25, 75],
@@ -28,7 +28,7 @@ const Planet = (() => {
       },
     },
     marginal: {
-      weight: 28,
+      weight: 30,
       ranges: {
         atmosphere:  [15, 60],
         gravity:     [10, 85],
@@ -39,7 +39,7 @@ const Planet = (() => {
       },
     },
     barren: {
-      weight: 25,
+      weight: 28,
       ranges: {
         atmosphere:  [0, 35],
         gravity:     [0, 100],
@@ -50,7 +50,7 @@ const Planet = (() => {
       },
     },
     hostile: {
-      weight: 19,
+      weight: 22,
       ranges: {
         atmosphere:  [0, 20],
         gravity:     [0, 100],
@@ -77,7 +77,7 @@ const Planet = (() => {
     [15, 35,  'Low',          'Easy on the body but structures have weak foundations.'],
     [35, 65,  'Moderate',     'Near Earth-standard. No significant penalties.'],
     [65, 85,  'High',         'Construction is laborious. Workers tire quickly.'],
-    [85, 100, 'Crushing',     'Extreme physical toll. Movement AI assists needed.'],
+    [85, 100, 'Crushing',     'Extreme physical toll. Exosuits and mechanical assistance required.'],
   ];
 
   const TEMP_LABELS = [
@@ -93,7 +93,7 @@ const Planet = (() => {
     [10, 30,  'Scarce',       'Ice pockets only. Extraction complex.'],
     [30, 55,  'Moderate',     'Lakes and rivers. Farming viable with effort.'],
     [55, 80,  'Abundant',     'Wide oceans. Coastal settlements ideal.'],
-    [80, 100, 'Oceanic',      'Mostly water. All structures need floating platforms.'],
+    [80, 100, 'Oceanic',      'Permanent land is rare. All settlements require marine foundations.'],
   ];
 
   const RES_LABELS = [
@@ -101,7 +101,7 @@ const Planet = (() => {
     [20, 45,  'Sparse',       'Limited deposits. Every resource counts.'],
     [45, 70,  'Rich',         'Good mineral diversity. Standard construction viable.'],
     [70, 90,  'Abundant',     'Multiple rare-earth deposits. Rapid industrialization possible.'],
-    [90, 100, 'Exceptional',  'Extraordinary resource density — almost too good to be true.'],
+    [90, 100, 'Exceptional',  'Mineral density far exceeding projections. Rapid industrialization possible.'],
   ];
 
   const BIO_LABELS = [
@@ -109,7 +109,7 @@ const Planet = (() => {
     [10, 30,  'Microbial',    'Simple extremophiles. Generally harmless.'],
     [30, 55,  'Sparse Flora', 'Plants and simple animals. Mixed impact on colonists.'],
     [55, 75,  'Rich Biome',   'Complex ecosystem. Could be resource or threat.'],
-    [75, 100, 'Teeming',      'Life everywhere. Aggressive adaptation expected.'],
+    [75, 100, 'Teeming',      'Life everywhere. Native organisms will contest every foothold.'],
   ];
 
   // ---- Planet anomalies ----

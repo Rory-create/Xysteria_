@@ -76,6 +76,17 @@ const UI = (() => {
     if (choicesEl) choicesEl.innerHTML = '';
   }
 
+  // Adds a muted skip button to the choices area and returns the element.
+  function showSkipButton(label, onClick) {
+    if (!choicesEl) return { remove: () => {} };
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn choice-btn--skip';
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    choicesEl.appendChild(btn);
+    return btn;
+  }
+
   // ---- Pixel art icon helper ----
 
   function _icon(name, color) {
@@ -146,6 +157,7 @@ const UI = (() => {
       <div class="hud-stat">${_icon('probe','#9898b8')} Probes: <strong>${ship.probes}</strong></div>
       <div class="hud-stat">${_icon('planets','#9898b8')} Planets scanned: <strong>${planetsVisited}</strong></div>
       <div class="hud-stat">📡 Scanner: <strong>${['Basic','Improved','Advanced','Deep-Range'][ship.scannerLevel] || 'Basic'}</strong></div>
+      <div class="hud-stat">Crossings: <strong>${ship.turnsElapsed}</strong></div>
       ${ship.relics.length > 0 ? `<div class="hud-stat">${_icon('relic','#f0a040')} Relics: <strong>${ship.relics.length}</strong></div>` : ''}
 
       <div class="hud-divider"></div>
@@ -464,6 +476,7 @@ const UI = (() => {
     showChoices,
     showContinueButton,
     clearChoices,
+    showSkipButton,
     updateHUD,
     updateLandfallHUD,
     renderPlanetPanel,

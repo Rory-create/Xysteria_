@@ -15,7 +15,7 @@
   --danger: #e94560;
   --relic: #f0a040;
   --text: #dcdcf0;
-  --text-dim: #9898b8;
+  --text-dim: #ababc8;
   --border: #2a2a42;
 
   --hud-w: 240px;
@@ -27,7 +27,7 @@ html, body {
   background: var(--bg0);
   color: var(--text);
   font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 14px;
+  font-size: 15px;
   overflow: hidden;
 }
 
@@ -201,7 +201,7 @@ html, body {
 }
 
 .hud-label {
-  font-size: 12px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-dim);
@@ -231,7 +231,7 @@ html, body {
 .hud-bar.robots_maintain  { background: linear-gradient(90deg, #4ce9e9, #208080); }
 
 .hud-value {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
   text-align: right;
 }
@@ -243,7 +243,7 @@ html, body {
 }
 
 .hud-stat {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   margin-bottom: 3px;
 }
@@ -278,18 +278,18 @@ html, body {
   color: var(--text);
 }
 
-.narrative-line.flavor   { color: var(--text-dim); font-style: italic; font-size: 13px; }
+.narrative-line.flavor   { color: var(--text-dim); font-style: italic; font-size: 14px; }
 .narrative-line.warning  { color: var(--warn); }
 .narrative-line.critical { color: var(--danger); font-weight: 700; }
 .narrative-line.relic    { color: var(--relic); font-weight: 700; }
 .narrative-line.success  { color: var(--accent3); }
-.narrative-line.dim      { color: var(--text-dim); font-size: 13px; }
-.narrative-line.opening  { font-size: 15px; font-weight: 700; color: var(--accent2); }
+.narrative-line.dim      { color: var(--text-dim); font-size: 14px; }
+.narrative-line.opening  { font-size: 16px; font-weight: 700; color: var(--accent2); }
 
 .narrative-separator {
   text-align: center;
   color: var(--accent);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   padding: 4px 0;
@@ -343,7 +343,7 @@ html, body {
 }
 
 .attr-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -365,7 +365,7 @@ html, body {
 }
 
 .attr-label-detail {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   line-height: 1.4;
 }
@@ -378,7 +378,7 @@ html, body {
 }
 
 .anomaly-header {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -387,7 +387,7 @@ html, body {
 }
 
 .anomaly-item {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   margin-bottom: 6px;
   padding: 5px 7px;
@@ -465,6 +465,12 @@ html, body {
 .choice-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.choice-btn--skip {
+  opacity: 0.45;
+  font-size: 12px;
+  border-style: dashed;
 }
 
 .choice-num {
@@ -557,7 +563,7 @@ html, body {
   cursor: not-allowed;
 }
 
-.dim-text { color: var(--text-dim); font-size: 11px; }
+.dim-text { color: var(--text-dim); font-size: 12px; }
 
 /* Shared buttons */
 .menu-btn {

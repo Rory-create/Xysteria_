@@ -25,8 +25,9 @@ const EventsCrossing = [
         label: 'Reroute all power to hull plating — absorb the storm',
         condition: (ship) => ship.power > 25,
         outcome: (ship) => {
-          const hullLoss  = 18 + Math.floor(Math.random() * 12);
-          const powerLoss = 12 + Math.floor(Math.random() * 8);
+          const sv        = Events.severity(ship);
+          const hullLoss  = Math.round((18 + Math.floor(Math.random() * 12)) * sv);
+          const powerLoss = Math.round((12 + Math.floor(Math.random() * 8))  * sv);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.damageSystem(ship, 'power', powerLoss);
           return {
@@ -40,8 +41,9 @@ const EventsCrossing = [
         label: 'Prioritize database shielding — protect accumulated knowledge',
         condition: () => true,
         outcome: (ship) => {
-          const colonistLoss = 100 + Math.floor(Math.random() * 70);
-          const hullLoss     = 12 + Math.floor(Math.random() * 10);
+          const sv           = Events.severity(ship);
+          const colonistLoss = Math.round((100 + Math.floor(Math.random() * 70)) * sv);
+          const hullLoss     = Math.round((12  + Math.floor(Math.random() * 10)) * sv);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.loseColonists(ship, colonistLoss);
           return {
@@ -55,10 +57,11 @@ const EventsCrossing = [
         label: 'No intervention — brace all systems, accept the damage',
         condition: () => true,
         outcome: (ship) => {
-          const sciLoss      = 20 + Math.floor(Math.random() * 15);
-          const cultLoss     = 15 + Math.floor(Math.random() * 12);
-          const hullLoss     = 10 + Math.floor(Math.random() * 10);
-          const colonistLoss = 50 + Math.floor(Math.random() * 50);
+          const sv           = Events.severity(ship);
+          const sciLoss      = Math.round((20 + Math.floor(Math.random() * 15)) * sv);
+          const cultLoss     = Math.round((15 + Math.floor(Math.random() * 12)) * sv);
+          const hullLoss     = Math.round((10 + Math.floor(Math.random() * 10)) * sv);
+          const colonistLoss = Math.round((50 + Math.floor(Math.random() * 50)) * sv);
           Ship.damageSystem(ship, 'science', sciLoss);
           Ship.damageSystem(ship, 'culture', cultLoss);
           Ship.damageSystem(ship, 'hull', hullLoss);
@@ -459,8 +462,9 @@ const EventsCrossing = [
         label: 'Maximum shield power — burn reserves to keep the hull intact',
         condition: (ship) => ship.hull > 25 && ship.power > 20,
         outcome: (ship) => {
-          const hullLoss  = 15 + Math.floor(Math.random() * 12);
-          const powerLoss = 22 + Math.floor(Math.random() * 13);
+          const sv        = Events.severity(ship);
+          const hullLoss  = Math.round((15 + Math.floor(Math.random() * 12)) * sv);
+          const powerLoss = Math.round((22 + Math.floor(Math.random() * 13)) * sv);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.damageSystem(ship, 'power', powerLoss);
           return {
@@ -474,9 +478,10 @@ const EventsCrossing = [
         label: 'Divert everything to database shielding — protect the knowledge at all costs',
         condition: () => true,
         outcome: (ship) => {
-          const hullLoss     = 28 + Math.floor(Math.random() * 17);
-          const colonistLoss = 100 + Math.floor(Math.random() * 80);
-          const powerLoss    = 15 + Math.floor(Math.random() * 10);
+          const sv           = Events.severity(ship);
+          const hullLoss     = Math.round((28 + Math.floor(Math.random() * 17)) * sv);
+          const colonistLoss = Math.round((100 + Math.floor(Math.random() * 80)) * sv);
+          const powerLoss    = Math.round((15  + Math.floor(Math.random() * 10)) * sv);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.damageSystem(ship, 'power', powerLoss);
           Ship.loseColonists(ship, colonistLoss);
@@ -491,7 +496,8 @@ const EventsCrossing = [
         label: 'Evasive burn — change vector and try to outrun the fringe',
         condition: (ship) => ship.power > 25,
         outcome: (ship) => {
-          const powerLoss = 28 + Math.floor(Math.random() * 17);
+          const sv        = Events.severity(ship);
+          const powerLoss = Math.round((28 + Math.floor(Math.random() * 17)) * sv);
           Ship.damageSystem(ship, 'power', powerLoss);
           const success = Math.random() > 0.4;
           if (success) {
@@ -500,9 +506,9 @@ const EventsCrossing = [
               losses: { power: powerLoss },
             };
           } else {
-            const hullLoss     = 20 + Math.floor(Math.random() * 15);
-            const sciLoss      = 15 + Math.floor(Math.random() * 12);
-            const colonistLoss = 50 + Math.floor(Math.random() * 50);
+            const hullLoss     = Math.round((20 + Math.floor(Math.random() * 15)) * sv);
+            const sciLoss      = Math.round((15 + Math.floor(Math.random() * 12)) * sv);
+            const colonistLoss = Math.round((50 + Math.floor(Math.random() * 50)) * sv);
             Ship.damageSystem(ship, 'hull', hullLoss);
             Ship.damageSystem(ship, 'science', sciLoss);
             Ship.loseColonists(ship, colonistLoss);

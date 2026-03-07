@@ -322,20 +322,34 @@ const Phase1 = (() => {
       'And when they knew the Earth was doomed, they built a ship.',
       'A thousand colonists in hibernation. The accumulated knowledge of a civilization. A chance.',
       'You are the ship\'s AI. You have been watching over them for eleven years.',
+      'The last transmission from Earth came three years into the flight. Static. Then silence.',
+      'You have charted the path. The colonists do not know how long it has truly been.',
       'The stars ahead hold no guarantees. Some of what you find will be survivable. Some will not.',
       'The mission is to find a world. Then to keep them alive on it.',
+      'Whatever you find out here — it is all they have left.',
       'The Crossing begins.',
     ];
 
+    let timerId = null;
+    const skipBtn = UI.showSkipButton('Skip Intro', () => {
+      if (timerId) clearTimeout(timerId);
+      skipBtn.remove();
+      callback();
+    });
+
     let i = 0;
     function nextLine() {
-      if (i >= lines.length) { callback(); return; }
+      if (i >= lines.length) {
+        skipBtn.remove();
+        callback();
+        return;
+      }
       UI.addNarrative(lines[i], i === 0 ? 'flavor opening' : 'flavor');
       i++;
       if (i < lines.length) {
-        setTimeout(nextLine, 600);
+        timerId = setTimeout(nextLine, 600);
       } else {
-        setTimeout(callback, 800);
+        timerId = setTimeout(() => { skipBtn.remove(); callback(); }, 800);
       }
     }
     nextLine();

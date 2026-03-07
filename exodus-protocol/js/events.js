@@ -18,9 +18,19 @@ const Events = (() => {
 
   // ---- Pick a Crossing event ----
 
+  // ---- Progressive severity: events hit harder the longer the journey ----
+  // Returns 1.0 at the start, up to 1.4 by turn 40+.
+  function severity(ship) {
+    return 1 + Math.min(0.4, ship.turnsElapsed * 0.01);
+  }
+
   function pickCrossingEvent(ship) {
-    // Scale severity: heavier damage amounts applied in choice outcomes via Ship.severityMultiplier
-    // Peaceful jump becomes less likely the more planets are skipped
+    // Some jumps are simply quiet — no event fires, ship goes straight to planet.
+    // ~30% chance early on, tapering to ~10% as the journey wears on.
+    const quietChance = Math.max(0.10, 0.30 - ship.turnsElapsed * 0.01);
+    if (Math.random() < quietChance) return null;
+
+    // Peaceful jump narrative becomes less likely the more planets are skipped
     const peacefulWeight = Math.max(5, 30 - ship.planetsVisited * 3);
 
     // Temporarily adjust peaceful event weight
@@ -59,5 +69,6 @@ const Events = (() => {
     getValidChoices,
     getEventNarrative,
     weightedPick,
+    severity,
   };
 })();
