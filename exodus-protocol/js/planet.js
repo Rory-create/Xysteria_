@@ -418,29 +418,35 @@ const Planet = (() => {
   }
 
   // ---- Describe a planet in narrative text ----
+  // noiseRange: if > 0, attributes show uncertainty ranges instead of exact values
 
-  function describe(planet, scanReadings) {
+  function describe(planet, scanReadings, noiseRange = 0) {
     const readings = scanReadings || planet;
-    const atm  = getLabel(readings.atmosphere,  ATM_LABELS);
-    const grav = getLabel(readings.gravity,      GRAV_LABELS);
-    const temp = getLabel(readings.temperature,  TEMP_LABELS);
-    const wat  = getLabel(readings.water,        WATER_LABELS);
-    const res  = getLabel(readings.resources,    RES_LABELS);
-    const bio  = getLabel(readings.biosphere,    BIO_LABELS);
+
+    function buildAttr(val, table) {
+      const { label, desc } = getLabel(val, table);
+      const entry = { value: val, label, desc };
+      if (noiseRange > 0) {
+        const lo = Math.max(0, val - noiseRange);
+        const hi = Math.min(100, val + noiseRange);
+        entry.rangeStr = `~${lo}–${hi}`;
+      }
+      return entry;
+    }
 
     return {
       name: planet.name,
       class: planet.class,
-      grade: planet.grade,
       anomalies: planet.anomalies || [],
       anomaliesRevealed: planet.anomaliesRevealed || false,
+      surveyed: planet.surveyed || false,
       attributes: {
-        atmosphere:  { value: readings.atmosphere,  ...atm  },
-        gravity:     { value: readings.gravity,      ...grav },
-        temperature: { value: readings.temperature,  ...temp },
-        water:       { value: readings.water,        ...wat  },
-        resources:   { value: readings.resources,    ...res  },
-        biosphere:   { value: readings.biosphere,    ...bio  },
+        atmosphere:  buildAttr(readings.atmosphere,  ATM_LABELS),
+        gravity:     buildAttr(readings.gravity,      GRAV_LABELS),
+        temperature: buildAttr(readings.temperature,  TEMP_LABELS),
+        water:       buildAttr(readings.water,        WATER_LABELS),
+        resources:   buildAttr(readings.resources,    RES_LABELS),
+        biosphere:   buildAttr(readings.biosphere,    BIO_LABELS),
       },
     };
   }

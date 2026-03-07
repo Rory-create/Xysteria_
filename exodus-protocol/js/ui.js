@@ -133,10 +133,19 @@ const UI = (() => {
         <div class="hud-value">${Math.round(ship.knowledge.culture)}%</div>
       </div>
 
+      <div class="hud-section">
+        <div class="hud-label">Landing Systems</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar landing" style="width:${pct(ship.landingSystems)}%;background:${ship.landingSystems < 50 ? '#e94560' : ship.landingSystems < 80 ? '#f0c040' : '#4ce9a0'}"></div>
+        </div>
+        <div class="hud-value">${Math.round(ship.landingSystems)}%</div>
+      </div>
+
       <div class="hud-divider"></div>
 
       <div class="hud-stat">${_icon('probe','#9898b8')} Probes: <strong>${ship.probes}</strong></div>
       <div class="hud-stat">${_icon('planets','#9898b8')} Planets scanned: <strong>${planetsVisited}</strong></div>
+      <div class="hud-stat">📡 Scanner: <strong>${['Basic','Improved','Advanced','Deep-Range'][ship.scannerLevel] || 'Basic'}</strong></div>
       ${ship.relics.length > 0 ? `<div class="hud-stat">${_icon('relic','#f0a040')} Relics: <strong>${ship.relics.length}</strong></div>` : ''}
 
       <div class="hud-divider"></div>
@@ -179,7 +188,7 @@ const UI = (() => {
       <div class="hud-divider"></div>
 
       <div class="hud-stat">${_icon('turns','#9898b8')} Turn: <strong>${turn}</strong> / 30</div>
-      <div class="hud-stat">${_icon('globe','#9898b8')} Planet: <strong>${planet.name}</strong> (${planet.grade})</div>
+      <div class="hud-stat">${_icon('globe','#9898b8')} Planet: <strong>${planet.name}</strong></div>
 
       <div class="hud-divider"></div>
 
@@ -197,12 +206,7 @@ const UI = (() => {
 
   function renderPlanetPanel(planetDesc, containerEl, anomaliesRevealed = false) {
     if (!containerEl) return;
-    const { name, grade, attributes, class: cls, anomalies } = planetDesc;
-
-    const gradeColor  = { A: '#4ce9a0', B: '#7cf0a0', C: '#f0c040', D: '#f07840', F: '#e94560' };
-    const gradeBg     = { A: '#1a4a30', B: '#1e3a28', C: '#3a3010', D: '#3a2010', F: '#3a0e18' };
-    const color = gradeColor[grade] || '#fff';
-    const bgCol = gradeBg[grade] || '#222';
+    const { name, attributes, class: cls, anomalies, surveyed } = planetDesc;
 
     // Build anomaly section
     let anomalyHtml = '';
@@ -230,20 +234,22 @@ const UI = (() => {
       }
     }
 
+    const surveyedBadge = surveyed
+      ? `<span class="planet-surveyed-badge">Probed</span>`
+      : `<span class="planet-unsurveyed-badge">Unprobed</span>`;
+
     containerEl.innerHTML = `
       <canvas id="planet-portrait" width="96" height="96"></canvas>
-      <div class="planet-name">${name}
-        <span class="planet-grade-badge" style="background:${bgCol};color:${color}">Grade ${grade}</span>
-      </div>
+      <div class="planet-name">${name} ${surveyedBadge}</div>
       <div class="planet-class">Class: ${cls}</div>
       <div class="planet-attrs">
         ${Object.entries(attributes).map(([key, attr]) => `
           <div class="planet-attr">
-            <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)} <span class="attr-value-num">${attr.value}</span></div>
+            <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)} <span class="attr-value-num">${attr.rangeStr || attr.value}</span></div>
             <div class="attr-bar-wrap">
               <div class="attr-bar" style="width:${attr.value}%;background:${attrColor(key, attr.value)}"></div>
             </div>
-            <div class="attr-label-detail">${attr.label} — <em>${attr.desc}</em></div>
+            <div class="attr-label-detail">${attr.label}${attr.rangeStr ? ' <em>(estimated)</em>' : ''} — <em>${attr.desc}</em></div>
           </div>
         `).join('')}
       </div>

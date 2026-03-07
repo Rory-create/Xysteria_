@@ -637,6 +637,30 @@ html, body {
   color: #000;
 }
 
+.planet-surveyed-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  margin-left: 6px;
+  background: #1a4a30;
+  color: #4ce9a0;
+  border: 1px solid #2a6a40;
+}
+
+.planet-unsurveyed-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  margin-left: 6px;
+  background: #2a2a10;
+  color: #a0a040;
+  border: 1px solid #4a4a20;
+}
+
 .attr-value-num {
   font-size: 11px;
   color: var(--text-dim);

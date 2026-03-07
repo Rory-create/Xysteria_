@@ -108,13 +108,23 @@ const Phase1 = (() => {
 
   function arriveAtPlanet() {
     currentPlanet = Planet.generate();
-    currentScanReadings = Ship.scanPlanet(currentPlanet, ship.knowledge.science);
-    const planetDesc = Planet.describe(currentPlanet, currentScanReadings);
+    currentScanReadings = Ship.scanPlanet(currentPlanet, ship.knowledge.science, ship.scannerLevel);
+    const noiseRange = Ship.scanNoiseRange(ship.knowledge.science, ship.scannerLevel);
+    const planetDesc = Planet.describe(currentPlanet, currentScanReadings, noiseRange);
 
     ship.planetsVisited += 1;
 
     UI.addSeparator(`— Planet Detected: ${currentPlanet.name} —`);
-    UI.addNarrative(`Sensors resolve a planet. ${ship.knowledge.science < 50 ? 'Readings are imprecise — the science database is damaged.' : 'Readings look reliable.'}`);
+
+    const scannerLabels = ['basic', 'improved', 'advanced', 'deep-range'];
+    const scanQuality = noiseRange === 0
+      ? 'Readings are exact.'
+      : noiseRange <= 8
+      ? 'Readings are mostly reliable — some uncertainty remains.'
+      : ship.knowledge.science < 50
+      ? 'Readings are imprecise — the science database is damaged.'
+      : 'Readings show a significant margin of uncertainty. A probe would resolve the exact values.';
+    UI.addNarrative(`Sensors resolve a planet. Scanner array: <strong>${scannerLabels[ship.scannerLevel] || 'basic'}</strong>. ${scanQuality}`);
 
     // Show anomaly hints (visible from orbit even without probe)
     if (currentPlanet.anomalies && currentPlanet.anomalies.length > 0) {
@@ -137,18 +147,22 @@ const Phase1 = (() => {
   // ---- Show choices when at a planet ----
 
   function showPlanetChoices(planetDesc) {
-    const { grade } = currentPlanet;
+    const landingStatus = ship.landingSystems >= 80 ? '' :
+      ship.landingSystems >= 50 ? ' ⚠ Landing systems degraded' :
+      ' ⚠⚠ Landing systems critical';
 
     const choices = [
       {
-        label: `Land here (Grade ${grade} planet)`,
+        label: `Land here${landingStatus}`,
         id: 'land',
         condition: () => true,
       },
       {
-        label: `Deploy probe for accurate readings (${ship.probes} remaining)`,
+        label: currentPlanet.surveyed
+          ? `Probe already deployed — readings are exact`
+          : `Deploy probe for exact readings (${ship.probes} remaining)`,
         id: 'probe',
-        condition: () => ship.probes > 0,
+        condition: () => ship.probes > 0 && !currentPlanet.surveyed,
       },
       {
         label: `Move on — search for better worlds`,
@@ -160,7 +174,7 @@ const Phase1 = (() => {
     if (bestPlanets.length > 0) {
       const best = bestPlanets[bestPlanets.length - 1];
       choices.push({
-        label: `Return to ${best.name} (Grade ${best.grade}) — costs 1 construction robot`,
+        label: `Return to ${best.name}${best.surveyed ? ' (probed)' : ''} — costs 1 construction robot`,
         id: 'return',
         condition: () => ship.constructionRobots > 0,
       });
@@ -190,15 +204,14 @@ const Phase1 = (() => {
 
   function deployProbe() {
     ship.probes -= 1;
-    currentScanReadings = { ...currentPlanet }; // exact readings
+    currentScanReadings = { ...currentPlanet }; // exact readings, no noise
     currentPlanet.surveyed = true;
     currentPlanet.anomaliesRevealed = true;
-    currentPlanet.grade = Planet.gradeplanet(currentPlanet);
 
-    const planetDesc = Planet.describe(currentPlanet, currentScanReadings);
+    const planetDesc = Planet.describe(currentPlanet, currentScanReadings, 0); // noiseRange=0 → exact
     if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl, true);
 
-    UI.addNarrative(`Probe deployed. Full sensor sweep complete. Readings are now exact.`);
+    UI.addNarrative(`Probe deployed. Full sensor sweep complete. All readings resolved to exact values.`);
 
     // Reveal anomalies
     if (currentPlanet.anomalies && currentPlanet.anomalies.length > 0) {
@@ -243,15 +256,19 @@ const Phase1 = (() => {
     if (!best) { arriveAtPlanet(); return; }
 
     currentPlanet = best;
-    currentScanReadings = best.surveyed
-      ? { ...best }
-      : Ship.scanPlanet(best, ship.knowledge.science);
+    let noiseRange = 0;
+    if (best.surveyed) {
+      currentScanReadings = { ...best };
+    } else {
+      currentScanReadings = Ship.scanPlanet(best, ship.knowledge.science, ship.scannerLevel);
+      noiseRange = Ship.scanNoiseRange(ship.knowledge.science, ship.scannerLevel);
+    }
 
-    const planetDesc = Planet.describe(currentPlanet, currentScanReadings);
+    const planetDesc = Planet.describe(currentPlanet, currentScanReadings, noiseRange);
     if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl, best.anomaliesRevealed);
 
     UI.addSeparator(`— Returning to ${best.name} —`);
-    UI.addNarrative(`You arrive back at ${best.name}. ${best.surveyed ? 'Probe data is still reliable.' : 'Time and sensor drift may have changed the readings.'}`);
+    UI.addNarrative(`You arrive back at ${best.name}. ${best.surveyed ? 'Probe data is still reliable.' : 'Time and sensor drift may have shifted the readings.'}`);
     UI.updateHUD(ship, ship.planetsVisited);
 
     showPlanetChoices(planetDesc);
@@ -262,17 +279,31 @@ const Phase1 = (() => {
   function landOnPlanet() {
     UI.clearChoices();
 
-    const grade = currentPlanet.grade;
-    const gradeMessages = {
-      A: 'A promising world. The colonists stir in their chambers as approach begins.',
-      B: 'A decent world. Challenges ahead, but survivable. The colonists sleep on.',
-      C: 'A difficult planet. There will be hardship. But this is where it ends.',
-      D: 'A harsh planet. The colonists will struggle. This is the choice you make.',
-      F: 'A brutal world. Emergency protocols engage the moment the ship enters orbit. Some colonists are already being woken.',
-    };
-
     UI.addSeparator('— Descent —');
-    UI.addNarrative(gradeMessages[grade] || 'Approach begins.', 'flavor');
+
+    const probeStatus = currentPlanet.surveyed ? 'Probe data confirmed.' : 'Surface conditions unverified — no probe deployed.';
+    UI.addNarrative(`Descent trajectory locked. ${probeStatus}`, 'flavor');
+
+    // Landing systems check
+    let landingLoss = 0;
+    if (ship.landingSystems < 20) {
+      landingLoss = 100 + Math.floor(Math.random() * 150);
+      Ship.loseColonists(ship, landingLoss);
+      UI.addNarrative(`<span class="narrative-critical">⚠ Landing systems critical — descent is violent. ${landingLoss} colonists lost in the emergency landing sequence.</span>`, 'critical');
+    } else if (ship.landingSystems < 50) {
+      landingLoss = 30 + Math.floor(Math.random() * 60);
+      Ship.loseColonists(ship, landingLoss);
+      UI.addNarrative(`<span class="narrative-warning">⚠ Landing systems degraded — rough descent. ${landingLoss} colonists lost to g-force trauma and cryo disruption.</span>`, 'warning');
+    } else if (ship.landingSystems < 80) {
+      landingLoss = 10 + Math.floor(Math.random() * 25);
+      Ship.loseColonists(ship, landingLoss);
+      UI.addNarrative(`Landing systems show minor wear. Descent is manageable — ${landingLoss} colonists lost to minor cryo disruption.`);
+    } else {
+      UI.addNarrative(`Landing systems nominal. Descent proceeds cleanly.`);
+    }
+
+    if (checkGameOver()) return;
+
     UI.addNarrative(`Final tally: ${ship.colonists.alive.toLocaleString()} colonists. Science DB: ${Math.round(ship.knowledge.science)}%. Culture DB: ${Math.round(ship.knowledge.culture)}%. Construction robots: ${ship.constructionRobots}. Maintenance robots: ${ship.maintenanceRobots}.`);
 
     if (ship.relics.length > 0) {

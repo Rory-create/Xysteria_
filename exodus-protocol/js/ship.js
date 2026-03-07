@@ -18,6 +18,8 @@ const Ship = (() => {
       },
       hull: 100,
       power: 100,
+      landingSystems: 100,  // affects descent safety; damageable during crossing
+      scannerLevel: 0,      // 0=basic, 1=improved, 2=advanced, 3=deep-range; reduces scan noise
       probes: 5,
       constructionRobots: 8,   // used for Phase 2 building speed
       maintenanceRobots: 5,    // deployable during Phase 1 events
@@ -40,8 +42,9 @@ const Ship = (() => {
       ship._firstDamageTaken = true;
     }
 
-    if (system === 'hull' || system === 'power') {
-      ship[system] = Math.max(0, ship[system] - amount);
+    if (system === 'hull' || system === 'power' || system === 'landing') {
+      const key = system === 'landing' ? 'landingSystems' : system;
+      ship[key] = Math.max(0, ship[key] - amount);
     } else {
       ship.knowledge[system] = Math.max(0, ship.knowledge[system] - amount);
     }
@@ -60,11 +63,17 @@ const Ship = (() => {
   }
 
   // ---- Planet scan noise ----
-  // Returns attribute readings with noise based on science DB level.
-  // At science=100 the reading is exact. At science=0, up to ±40 noise.
+  // Returns attribute readings with noise based on science DB and scanner level.
+  // At science=100 OR scanner level 3, readings are exact.
+  // Scanner level reduces noise by 8 per level (max 24 at level 3).
 
-  function scanPlanet(planet, science) {
-    const noiseRange = Math.round((1 - science / 100) * 40);
+  function scanNoiseRange(science, scannerLevel = 0) {
+    const sciNoise = Math.round((1 - science / 100) * 40);
+    return Math.max(0, sciNoise - scannerLevel * 8);
+  }
+
+  function scanPlanet(planet, science, scannerLevel = 0) {
+    const noiseRange = scanNoiseRange(science, scannerLevel);
     const noisy = {};
     for (const attr of ['atmosphere', 'gravity', 'temperature', 'water', 'resources', 'biosphere']) {
       const noise = noiseRange > 0 ? Math.floor(Math.random() * (noiseRange * 2 + 1)) - noiseRange : 0;
@@ -107,6 +116,7 @@ const Ship = (() => {
       planet: { ...planet },
       metaUpgrades: ship.metaUpgrades,
       log: [...ship.log],
+      landingSystems: ship.landingSystems,
     };
   }
 
@@ -116,6 +126,7 @@ const Ship = (() => {
     loseColonists,
     loseRobots,
     scanPlanet,
+    scanNoiseRange,
     severityMultiplier,
     serialize,
     deserialize,
