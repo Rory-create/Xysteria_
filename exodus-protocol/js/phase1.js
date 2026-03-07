@@ -18,7 +18,7 @@ const Phase1 = (() => {
     if (losses.power)       Ship.damageSystem(ship, 'power', losses.power);
     if (losses.science)     Ship.damageSystem(ship, 'science', losses.science);
     if (losses.culture)     Ship.damageSystem(ship, 'culture', losses.culture);
-    if (losses.engineering) Ship.damageSystem(ship, 'engineering', losses.engineering);
+    if (losses.engineering) { /* engineering DB removed — ignored */ }
     if (losses.colonists)   Ship.loseColonists(ship, losses.colonists);
   }
 
@@ -43,6 +43,9 @@ const Phase1 = (() => {
     if (checkGameOver()) return;
     ship.turnsElapsed += 1;
 
+    // Clear planet panel immediately, show generic deep-space art
+    if (planetPanelEl) UI.showEventArt(null, planetPanelEl);
+
     // Play warp animation before revealing event/planet
     if (bgCanvasEl) {
       Renderer.playWarpAnimation(bgCanvasEl, () => _resolveJump(isReturn));
@@ -65,6 +68,9 @@ const Phase1 = (() => {
       }
       return;
     }
+
+    // Show event-specific art
+    if (planetPanelEl) UI.showEventArt(event.id, planetPanelEl);
 
     // Event with choices
     UI.addSeparator(`— ${event.label} —`);
@@ -154,9 +160,9 @@ const Phase1 = (() => {
     if (bestPlanets.length > 0) {
       const best = bestPlanets[bestPlanets.length - 1];
       choices.push({
-        label: `Return to ${best.name} (Grade ${best.grade}) — costs engineering DB`,
+        label: `Return to ${best.name} (Grade ${best.grade}) — costs 1 construction robot`,
         id: 'return',
-        condition: () => ship.knowledge.engineering > 15,
+        condition: () => ship.constructionRobots > 0,
       });
     }
 
@@ -226,9 +232,8 @@ const Phase1 = (() => {
   // ---- Return to a previous planet (costs engineering DB) ----
 
   function initiateReturn() {
-    const cost = 10 + Math.floor(Math.random() * 10);
-    Ship.damageSystem(ship, 'engineering', cost);
-    UI.addNarrative(`Navigation calculates a return trajectory. Engineering DB strained by ${cost} from the complex calculation.`);
+    Ship.loseRobots(ship, 'construction', 1);
+    UI.addNarrative(`Navigation recalibrates for return trajectory. One construction unit consumed in the process.`);
     UI.updateHUD(ship, ship.planetsVisited);
     doJump(true);
   }
@@ -268,7 +273,7 @@ const Phase1 = (() => {
 
     UI.addSeparator('— Descent —');
     UI.addNarrative(gradeMessages[grade] || 'Approach begins.', 'flavor');
-    UI.addNarrative(`Final tally: ${ship.colonists.alive.toLocaleString()} colonists. Science DB: ${Math.round(ship.knowledge.science)}%. Culture DB: ${Math.round(ship.knowledge.culture)}%. Engineering DB: ${Math.round(ship.knowledge.engineering)}%.`);
+    UI.addNarrative(`Final tally: ${ship.colonists.alive.toLocaleString()} colonists. Science DB: ${Math.round(ship.knowledge.science)}%. Culture DB: ${Math.round(ship.knowledge.culture)}%. Construction robots: ${ship.constructionRobots}. Maintenance robots: ${ship.maintenanceRobots}.`);
 
     if (ship.relics.length > 0) {
       UI.addNarrative(`Relics in cargo: ${ship.relics.map(r => r.replace(/_/g, ' ')).join(', ')}.`, 'relic');

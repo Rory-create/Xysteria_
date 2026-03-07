@@ -4,6 +4,459 @@
 const Renderer = (() => {
   const spriteCache = {};  // { path: spriteData | 'loading' | 'error' }
 
+  // ---- Pixel art icon system ----
+  // Each icon is drawn at 12×12 and returned as a PNG data URL (cached).
+
+  const _iconCache = new Map();
+
+  // Draw one icon by name onto ctx (12×12 internal pixel grid)
+  function _drawIconShape(ctx, name, color) {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    const f = (x, y, w, h) => ctx.fillRect(x, y, w, h);
+
+    switch (name) {
+      case 'probe': // telescope
+        f(0,4,2,4); f(2,3,7,6); f(9,5,3,2); break;
+
+      case 'planets': // 3 dots
+        f(1,1,3,3); f(5,4,4,4); f(9,8,2,2); break;
+
+      case 'relic': // 4-point diamond
+        f(5,0,2,2); f(3,2,6,2); f(1,4,10,4); f(3,8,6,2); f(5,10,2,2); break;
+
+      case 'food': // wheat stalk
+        f(5,0,2,1); f(4,1,4,1); f(5,2,2,8); f(3,4,2,2); f(7,6,2,2); break;
+
+      case 'power': // lightning bolt
+        f(7,0,3,1); f(6,1,3,1); f(5,2,3,1); f(4,3,5,1); f(3,4,5,1);
+        f(5,5,3,1); f(4,6,3,1); f(3,7,3,1); f(2,8,3,1); break;
+
+      case 'materials': // ore chunk
+        f(3,1,6,2); f(1,3,10,4); f(2,7,8,2); f(4,9,4,2); break;
+
+      case 'science': // flask
+        f(4,0,4,1); f(5,1,2,4); f(2,5,8,5); f(1,10,10,1); break;
+
+      case 'turns': // hourglass
+        f(1,0,10,2); f(2,2,8,1); f(3,3,6,1); f(4,4,4,1); f(4,5,4,1); f(3,6,6,1); f(2,7,8,1); f(1,8,10,2); break;
+
+      case 'globe': // circle with equator line
+        f(4,0,4,1); f(2,1,8,1); f(1,2,10,1); f(0,3,12,1); f(0,4,12,2); f(0,6,12,1); f(1,7,10,1); f(2,8,8,1); f(4,9,4,1); break;
+
+      case 'culture': // open book
+        f(0,1,1,10); f(1,0,5,1); f(1,10,5,1); f(6,0,1,11);
+        f(7,0,4,1); f(7,10,4,1); f(11,1,1,10); break;
+
+      case 'robots_construct': // arm with claw
+        f(0,4,7,3); f(7,2,3,2); f(7,7,3,2); f(10,1,2,4); f(10,7,2,4); break;
+
+      case 'robots_maintain': // wrench
+        f(0,4,2,2); f(1,2,2,2); f(1,6,2,2); f(2,1,3,1); f(2,8,3,1); f(4,3,1,4);
+        f(5,4,6,2); f(10,3,2,4); f(11,2,1,2); f(11,6,1,2); break;
+
+      case 'build': // hammer
+        f(0,2,9,4); f(4,6,4,5); break;
+
+      case 'research': // atom — circle center + 2 crossing ellipses (pixel approximation)
+        f(4,0,4,1); f(2,1,3,1); f(9,1,1,1);
+        f(1,2,2,1); f(9,2,2,1);
+        f(0,3,2,1); f(10,3,2,1);
+        f(0,4,12,4);
+        f(0,7,2,1); f(10,7,2,1);
+        f(1,8,2,1); f(9,8,2,1);
+        f(2,9,3,1); f(7,9,3,1);
+        f(4,10,4,1);
+        f(4,4,4,4); // center circle
+        break;
+
+      case 'vault': // hexagon outline
+        f(3,0,6,1); f(1,1,2,1); f(9,1,2,1); f(0,2,2,1); f(10,2,2,1);
+        f(0,3,1,6); f(11,3,1,6);
+        f(0,9,2,1); f(10,9,2,1); f(1,10,2,1); f(9,10,2,1); f(3,11,6,1); break;
+
+      case 'back': // left arrow
+        f(5,0,1,1); f(4,1,1,2); f(3,2,1,2); f(2,3,1,2); f(1,4,1,2); f(0,5,1,2);
+        f(1,6,1,2); f(2,7,1,2); f(3,8,1,2); f(4,9,1,2); f(5,10,1,1);
+        f(3,5,9,2); break;
+
+      case 'star4': // 4-point star
+        f(5,0,2,12); f(0,5,12,2); break;
+
+      case 'warning_tri': // triangle + !
+        f(5,0,2,2); f(4,2,4,2); f(3,4,6,2); f(2,6,8,2); f(1,8,10,2); f(0,10,12,2);
+        f(5,4,2,4); f(5,9,2,1); break;
+
+      case 'diamond_mix': // filled diamond
+        f(5,0,2,2); f(3,2,6,2); f(1,4,10,4); f(3,8,6,2); f(5,10,2,2); break;
+
+      case 'check': // checkmark
+        f(0,6,2,2); f(2,8,2,2); f(4,10,2,2); f(5,8,2,2); f(7,6,2,2); f(9,4,2,2); f(11,2,1,2); break;
+
+      case 'house': // house silhouette
+        f(5,0,2,1); f(4,1,4,1); f(3,2,6,1); f(2,3,8,1); f(1,4,10,1);
+        f(1,5,10,6); f(4,7,4,4); break;
+
+      case 'water': // teardrop
+        f(5,0,2,2); f(4,2,4,2); f(3,4,6,2); f(2,6,8,2); f(2,8,8,2); f(3,10,6,2); break;
+
+      case 'sun': // circle + 4 rays
+        f(5,0,2,2); f(5,10,2,2); f(0,5,2,2); f(10,5,2,2);
+        f(4,3,4,6); f(3,4,6,4); break; // circle body
+
+      case 'shield': // shield shape
+        f(1,0,10,1); f(0,1,12,5); f(1,6,10,2); f(2,8,8,2); f(4,10,4,1); f(5,11,2,1); break;
+
+      case 'atom': // same as research but simpler
+        f(4,4,4,4); f(0,5,12,2); f(3,0,1,12); f(5,0,1,12); break;
+
+      case 'robot': // robot face
+        f(1,0,10,1); f(0,1,12,8); f(1,9,10,1); f(2,2,3,3); f(7,2,3,3); f(1,6,10,2); break;
+
+      case 'brain': // lumpy organic shape
+        f(3,0,6,1); f(1,1,4,2); f(6,1,4,2); f(0,3,5,3); f(7,3,5,3); f(1,6,10,3); f(3,9,6,2); break;
+
+      case 'water_drop': // alias
+        f(5,0,2,2); f(4,2,4,2); f(3,4,6,2); f(2,6,8,2); f(2,8,8,2); f(3,10,6,2); break;
+
+      default: // fallback: small square
+        f(2,2,8,8); break;
+    }
+  }
+
+  function getIcon(name, color) {
+    const col = color || '#dcdcf0';
+    const key = name + '|' + col;
+    if (_iconCache.has(key)) return _iconCache.get(key);
+
+    const SIZE = 12;
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    _drawIconShape(ctx, name, col);
+    const url = canvas.toDataURL();
+    _iconCache.set(key, url);
+    return url;
+  }
+
+  // ---- Event art renderer ----
+  // Draws a procedural scene into the planet panel area during Phase 1 jumps.
+
+  function drawEventArt(ctx, w, h, eventId, seed) {
+    // LCG seeded random
+    let s = (seed || 42) | 1;
+    const rand = () => { s = Math.imul(s, 1664525) + 1013904223 | 0; return (s >>> 0) / 4294967296; };
+
+    // Base: dark starfield background
+    ctx.fillStyle = '#06060f';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw base stars
+    const starCount = Math.floor(w * h / 600);
+    for (let i = 0; i < starCount; i++) {
+      const sx = rand() * w;
+      const sy = rand() * h;
+      const br = 0.2 + rand() * 0.6;
+      ctx.fillStyle = `rgba(255,255,255,${br.toFixed(2)})`;
+      ctx.fillRect(sx, sy, rand() > 0.93 ? 2 : 1, rand() > 0.93 ? 2 : 1);
+    }
+
+    switch (eventId) {
+      case 'asteroid_field': {
+        const count = 6 + Math.floor(rand() * 8);
+        for (let i = 0; i < count; i++) {
+          const ax = rand() * w;
+          const ay = rand() * h;
+          const radius = 8 + rand() * 22;
+          const sides = 5 + Math.floor(rand() * 4);
+          const gray  = Math.round(60 + rand() * 70);
+          const warm  = Math.round(rand() * 30);
+          ctx.fillStyle = `rgb(${gray + warm},${gray},${Math.max(0,gray-10)})`;
+          ctx.beginPath();
+          for (let v = 0; v < sides; v++) {
+            const angle = (v / sides) * Math.PI * 2 + rand() * 0.5;
+            const r2 = radius * (0.6 + rand() * 0.4);
+            const vx = ax + Math.cos(angle) * r2;
+            const vy = ay + Math.sin(angle) * r2;
+            if (v === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+          }
+          ctx.closePath();
+          ctx.fill();
+          // Dark crater hint
+          ctx.fillStyle = `rgba(0,0,0,0.3)`;
+          ctx.beginPath();
+          ctx.arc(ax - radius * 0.2, ay - radius * 0.2, radius * 0.25, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+
+      case 'radiation_storm': {
+        // Purple-green wave bands from upper-left
+        const cx = -w * 0.3, cy = -h * 0.3;
+        for (let band = 0; band < 12; band++) {
+          const r0 = (w * 0.3) + band * (w * 0.12);
+          const alpha = 0.06 + rand() * 0.10;
+          const green = band % 2 === 0;
+          const col = green ? `rgba(60,220,80,${alpha})` : `rgba(140,40,220,${alpha})`;
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 4 + rand() * 8;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        // Bright source flare at corner
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.5);
+        grad.addColorStop(0, 'rgba(200,255,180,0.25)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+        break;
+      }
+
+      case 'solar_flare': {
+        // Star at top-left corner + eruption arc
+        const starGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.6);
+        starGrad.addColorStop(0, 'rgba(255,240,180,0.9)');
+        starGrad.addColorStop(0.2, 'rgba(255,160,30,0.5)');
+        starGrad.addColorStop(0.5, 'rgba(255,80,10,0.2)');
+        starGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = starGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Eruption arcs
+        for (let arc = 0; arc < 4; arc++) {
+          const angle = 0.3 + arc * 0.25 + rand() * 0.2;
+          const len   = w * (0.4 + rand() * 0.4);
+          ctx.strokeStyle = `rgba(255,${120 + Math.floor(rand() * 100)},20,0.5)`;
+          ctx.lineWidth = 3 + rand() * 5;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          const cx2 = Math.cos(angle) * len * 0.5 + (rand() - 0.5) * 50;
+          const cy2 = Math.sin(angle) * len * 0.5 + (rand() - 0.5) * 50;
+          ctx.quadraticCurveTo(cx2, cy2, Math.cos(angle) * len, Math.sin(angle) * len);
+          ctx.stroke();
+        }
+        break;
+      }
+
+      case 'cryo_malfunction': {
+        // Blue frost patterns + cryo pod silhouettes
+        // Pod shapes along bottom
+        const podW = 24, podH = 40;
+        const podCount = Math.floor(w / (podW + 6));
+        for (let p = 0; p < podCount; p++) {
+          const px2 = p * (podW + 6) + 8;
+          const py2 = h - podH - 10;
+          const broken = rand() < 0.35;
+          ctx.fillStyle = broken ? '#1a0a22' : '#0a1a2e';
+          ctx.fillRect(px2, py2, podW, podH);
+          ctx.strokeStyle = broken ? '#e94560' : '#2a4a8a';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px2, py2, podW, podH);
+          // Pod window
+          ctx.fillStyle = broken ? 'rgba(233,69,96,0.4)' : 'rgba(80,140,220,0.3)';
+          ctx.fillRect(px2 + 4, py2 + 6, podW - 8, podH * 0.5);
+        }
+
+        // Frost crystal lines from top
+        ctx.strokeStyle = 'rgba(140,190,255,0.4)';
+        for (let fr = 0; fr < 20; fr++) {
+          const fx = rand() * w;
+          const len2 = 15 + rand() * 40;
+          const angle2 = (Math.PI * 0.5) + (rand() - 0.5) * 1.2;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(fx, 0);
+          ctx.lineTo(fx + Math.cos(angle2) * len2, Math.sin(angle2) * len2);
+          ctx.stroke();
+          // Branch
+          const blen = len2 * 0.4;
+          const bang = angle2 + 0.6;
+          ctx.beginPath();
+          ctx.moveTo(fx + Math.cos(angle2) * len2 * 0.5, Math.sin(angle2) * len2 * 0.5);
+          ctx.lineTo(fx + Math.cos(angle2) * len2 * 0.5 + Math.cos(bang) * blen,
+                     Math.sin(angle2) * len2 * 0.5 + Math.sin(bang) * blen);
+          ctx.stroke();
+        }
+        break;
+      }
+
+      case 'cultural_schism': {
+        // Warm left half, cool right half, dividing line
+        const leftGrad = ctx.createLinearGradient(0, 0, w * 0.5, 0);
+        leftGrad.addColorStop(0, 'rgba(180,60,20,0.25)');
+        leftGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = leftGrad;
+        ctx.fillRect(0, 0, w * 0.5, h);
+
+        const rightGrad = ctx.createLinearGradient(w * 0.5, 0, w, 0);
+        rightGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        rightGrad.addColorStop(1, 'rgba(20,60,200,0.25)');
+        ctx.fillStyle = rightGrad;
+        ctx.fillRect(w * 0.5, 0, w * 0.5, h);
+
+        // Dividing line
+        ctx.strokeStyle = 'rgba(200,200,255,0.5)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(w * 0.5, 0);
+        ctx.lineTo(w * 0.5, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Scattered data fragments
+        for (let d = 0; d < 12; d++) {
+          const dx = rand() * w;
+          const dy = rand() * h;
+          const dw2 = 8 + rand() * 20;
+          const dh2 = 4 + rand() * 10;
+          const warm2 = dx < w * 0.5;
+          ctx.fillStyle = warm2 ? 'rgba(220,100,40,0.3)' : 'rgba(60,100,220,0.3)';
+          ctx.fillRect(dx, dy, dw2, dh2);
+        }
+        break;
+      }
+
+      case 'gravitational_anomaly': {
+        // Concentric distortion rings around off-center point
+        const cx2 = w * 0.6, cy2 = h * 0.4;
+        for (let ring = 1; ring <= 8; ring++) {
+          const r2 = ring * (Math.min(w, h) * 0.12);
+          const alpha2 = 0.05 + (0.15 / ring);
+          ctx.strokeStyle = `rgba(140,160,255,${alpha2.toFixed(2)})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(cx2, cy2, r2, r2 * 0.6, 0.3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Bent star trails
+        for (let st = 0; st < 8; st++) {
+          const startX = rand() * w;
+          const startY = rand() * h;
+          const alpha3 = 0.1 + rand() * 0.2;
+          ctx.strokeStyle = `rgba(200,210,255,${alpha3.toFixed(2)})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          // Bend toward anomaly center
+          const midX = (startX + cx2) * 0.5 + (rand() - 0.5) * 20;
+          const midY = (startY + cy2) * 0.5 + (rand() - 0.5) * 20;
+          ctx.quadraticCurveTo(midX, midY, cx2 + (rand()-0.5)*30, cy2 + (rand()-0.5)*30);
+          ctx.stroke();
+        }
+        break;
+      }
+
+      case 'relic_signal': {
+        // Geometric alien glyph centered
+        const cx3 = w / 2, cy3 = h / 2;
+        const gsize = Math.min(w, h) * 0.3;
+
+        // Outer glow
+        const gGrad = ctx.createRadialGradient(cx3, cy3, 0, cx3, cy3, gsize * 1.5);
+        gGrad.addColorStop(0, 'rgba(100,255,180,0.15)');
+        gGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Hexagon outer
+        ctx.strokeStyle = 'rgba(100,255,180,0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let v = 0; v < 6; v++) {
+          const angle = (v / 6) * Math.PI * 2 - Math.PI / 6;
+          const vx = cx3 + Math.cos(angle) * gsize;
+          const vy = cy3 + Math.sin(angle) * gsize;
+          if (v === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Inner triangle
+        ctx.strokeStyle = 'rgba(180,255,220,0.6)';
+        ctx.beginPath();
+        for (let v = 0; v < 3; v++) {
+          const angle = (v / 3) * Math.PI * 2 - Math.PI / 2;
+          const vx = cx3 + Math.cos(angle) * gsize * 0.5;
+          const vy = cy3 + Math.sin(angle) * gsize * 0.5;
+          if (v === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Center point
+        ctx.fillStyle = 'rgba(200,255,230,0.8)';
+        ctx.beginPath();
+        ctx.arc(cx3, cy3, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Radiating line spokes
+        ctx.strokeStyle = 'rgba(100,255,180,0.2)';
+        ctx.lineWidth = 1;
+        for (let sp = 0; sp < 12; sp++) {
+          const angle = (sp / 12) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(cx3, cy3);
+          ctx.lineTo(cx3 + Math.cos(angle) * gsize * 1.4, cy3 + Math.sin(angle) * gsize * 1.4);
+          ctx.stroke();
+        }
+        break;
+      }
+
+      case 'systems_failure': {
+        // Red warning grid + sparks
+        // Tint background red
+        ctx.fillStyle = 'rgba(100,10,10,0.4)';
+        ctx.fillRect(0, 0, w, h);
+
+        // Warning grid
+        ctx.strokeStyle = 'rgba(200,40,40,0.15)';
+        ctx.lineWidth = 1;
+        const gridStep = 18;
+        for (let gx = 0; gx < w; gx += gridStep) {
+          ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
+        }
+        for (let gy = 0; gy < h; gy += gridStep) {
+          ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+        }
+
+        // Spark streaks
+        for (let sp = 0; sp < 16; sp++) {
+          const sx = rand() * w;
+          const sy = rand() * h;
+          const sl = 10 + rand() * 40;
+          const angle = rand() * Math.PI * 2;
+          const brightness = 150 + Math.floor(rand() * 100);
+          ctx.strokeStyle = `rgba(${brightness},${Math.floor(brightness*0.3)},10,0.7)`;
+          ctx.lineWidth = 1 + rand() * 2;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx + Math.cos(angle) * sl, sy + Math.sin(angle) * sl);
+          ctx.stroke();
+        }
+
+        // Warning text-like rectangles (simulate alert bars)
+        for (let al = 0; al < 3; al++) {
+          const ay2 = h * (0.2 + al * 0.25);
+          ctx.fillStyle = 'rgba(200,20,20,0.2)';
+          ctx.fillRect(10, ay2, w - 20, 8);
+          ctx.fillStyle = 'rgba(255,60,60,0.5)';
+          ctx.fillRect(10, ay2, (w - 20) * (0.3 + rand() * 0.6), 8);
+        }
+        break;
+      }
+
+      default: // peaceful_jump / null — clean starfield already drawn above
+        break;
+    }
+  }
+
   // ---- Load a sprite JSON (async, cached) ----
 
   async function loadSprite(path) {
@@ -467,5 +920,7 @@ const Renderer = (() => {
     drawPlanetFallback,
     drawPlanet,
     playWarpAnimation,
+    getIcon,
+    drawEventArt,
   };
 })();

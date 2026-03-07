@@ -15,11 +15,12 @@ const Ship = (() => {
       knowledge: {
         science: Math.min(100, 100 + Math.round(100 * scienceBonus)),
         culture: 100,
-        engineering: 100,
       },
       hull: 100,
       power: 100,
       probes: 5,
+      constructionRobots: 8,   // used for Phase 2 building speed
+      maintenanceRobots: 5,    // deployable during Phase 1 events
       relics: [],           // array of relic ids found during The Crossing
       log: [],              // narrative history [{turn, text}]
       planetsVisited: 0,
@@ -32,7 +33,7 @@ const Ship = (() => {
   // ---- Damage model ----
 
   function damageSystem(ship, system, amount) {
-    // system: 'hull' | 'power' | 'science' | 'culture' | 'engineering'
+    // system: 'hull' | 'power' | 'science' | 'culture'
     // Adaptive Hull meta: first damage taken per run is halved
     if (!ship._firstDamageTaken && ship.metaUpgrades.adaptive_hull) {
       amount = Math.ceil(amount / 2);
@@ -44,6 +45,12 @@ const Ship = (() => {
     } else {
       ship.knowledge[system] = Math.max(0, ship.knowledge[system] - amount);
     }
+  }
+
+  function loseRobots(ship, type, n) {
+    // type: 'maintenance' | 'construction'
+    const key = type === 'maintenance' ? 'maintenanceRobots' : 'constructionRobots';
+    ship[key] = Math.max(0, (ship[key] || 0) - n);
   }
 
   function loseColonists(ship, count) {
@@ -91,9 +98,9 @@ const Ship = (() => {
       techAccess: {
         science: ship.knowledge.science,
         culture: ship.knowledge.culture,
-        engineering: ship.knowledge.engineering,
       },
-      buildingSpeedMod: 0.5 + (ship.knowledge.engineering / 100) * 0.5, // 0.5× – 1.0×
+      constructionRobots: ship.constructionRobots,
+      buildingSpeedMod: 0.3 + (ship.constructionRobots / 10) * 0.7, // 0.3× – 1.0×
       energyStockpile: Math.round(ship.power * 0.3),     // leftover power → energy
       structuralQuality: Math.round(ship.hull),           // affects building success rate
       relics: [...ship.relics],
@@ -107,6 +114,7 @@ const Ship = (() => {
     createDefault,
     damageSystem,
     loseColonists,
+    loseRobots,
     scanPlanet,
     severityMultiplier,
     serialize,

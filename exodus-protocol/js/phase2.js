@@ -11,7 +11,8 @@ const Phase2 = (() => {
 
   function createGameState(phase2Start) {
     const { population, morale, techAccess, buildingSpeedMod, energyStockpile,
-            structuralQuality, relics, planet, metaUpgrades, log } = phase2Start;
+            structuralQuality, relics, planet, metaUpgrades, log,
+            constructionRobots, maintenanceRobots } = phase2Start;
 
     // Compute free starting techs
     const allNodes = [...TechTreeBase, ...TechTreeRelics];
@@ -41,6 +42,8 @@ const Phase2 = (() => {
       techAccess: { ...techAccess },
       buildingSpeedMod,
       structuralQuality,
+      constructionRobots: constructionRobots ?? 8,
+      maintenanceRobots: maintenanceRobots ?? 5,
       relics: unlockedRelics,
       metaUpgrades,
       log: [...log],

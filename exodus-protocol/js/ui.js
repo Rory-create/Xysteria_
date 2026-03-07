@@ -76,6 +76,13 @@ const UI = (() => {
     if (choicesEl) choicesEl.innerHTML = '';
   }
 
+  // ---- Pixel art icon helper ----
+
+  function _icon(name, color) {
+    const src = Renderer.getIcon(name, color);
+    return `<img class="pixel-icon" src="${src}" alt="">`;
+  }
+
   // ---- HUD / stat bars ----
 
   function updateHUD(ship, planetsVisited) {
@@ -126,19 +133,16 @@ const UI = (() => {
         <div class="hud-value">${Math.round(ship.knowledge.culture)}%</div>
       </div>
 
-      <div class="hud-section">
-        <div class="hud-label">Engineering DB</div>
-        <div class="hud-bar-wrap">
-          <div class="hud-bar engineering" style="width:${pct(ship.knowledge.engineering)}%"></div>
-        </div>
-        <div class="hud-value">${Math.round(ship.knowledge.engineering)}%</div>
-      </div>
+      <div class="hud-divider"></div>
+
+      <div class="hud-stat">${_icon('probe','#9898b8')} Probes: <strong>${ship.probes}</strong></div>
+      <div class="hud-stat">${_icon('planets','#9898b8')} Planets scanned: <strong>${planetsVisited}</strong></div>
+      ${ship.relics.length > 0 ? `<div class="hud-stat">${_icon('relic','#f0a040')} Relics: <strong>${ship.relics.length}</strong></div>` : ''}
 
       <div class="hud-divider"></div>
 
-      <div class="hud-stat">🔭 Probes: <strong>${ship.probes}</strong></div>
-      <div class="hud-stat">🌌 Planets scanned: <strong>${planetsVisited}</strong></div>
-      ${ship.relics.length > 0 ? `<div class="hud-stat">💎 Relics: <strong>${ship.relics.length}</strong></div>` : ''}
+      <div class="hud-stat">${_icon('robots_construct','#a07cf0')} Build robots: <strong>${ship.constructionRobots}</strong></div>
+      <div class="hud-stat">${_icon('robots_maintain','#4ce9a0')} Maint. robots: <strong>${ship.maintenanceRobots}</strong></div>
     `;
   }
 
@@ -167,22 +171,25 @@ const UI = (() => {
 
       <div class="hud-divider"></div>
 
-      <div class="hud-stat">🌾 Food: <strong>${resources.food}</strong></div>
-      <div class="hud-stat">⚡ Power: <strong>${resources.power}</strong></div>
-      <div class="hud-stat">🪨 Materials: <strong>${resources.materials}</strong></div>
-      <div class="hud-stat">🔬 Research: <strong>${resources.science_pts}</strong></div>
+      <div class="hud-stat">${_icon('food','#9898b8')} Food: <strong>${resources.food}</strong></div>
+      <div class="hud-stat">${_icon('power','#9898b8')} Power: <strong>${resources.power}</strong></div>
+      <div class="hud-stat">${_icon('materials','#9898b8')} Materials: <strong>${resources.materials}</strong></div>
+      <div class="hud-stat">${_icon('science','#9898b8')} Research: <strong>${resources.science_pts}</strong></div>
 
       <div class="hud-divider"></div>
 
-      <div class="hud-stat">📅 Turn: <strong>${turn}</strong> / 30</div>
-      <div class="hud-stat">🌍 Planet: <strong>${planet.name}</strong> (${planet.grade})</div>
+      <div class="hud-stat">${_icon('turns','#9898b8')} Turn: <strong>${turn}</strong> / 30</div>
+      <div class="hud-stat">${_icon('globe','#9898b8')} Planet: <strong>${planet.name}</strong> (${planet.grade})</div>
 
       <div class="hud-divider"></div>
 
       <div class="hud-label">Tech Access</div>
-      <div class="hud-stat">🔬 Science: <strong>${Math.round(gs.techAccess.science)}%</strong></div>
-      <div class="hud-stat">📚 Culture: <strong>${Math.round(gs.techAccess.culture)}%</strong></div>
-      <div class="hud-stat">⚙️ Engineering: <strong>${Math.round(gs.techAccess.engineering)}%</strong></div>
+      <div class="hud-stat">${_icon('science','#4c8ce9')} Science: <strong>${Math.round(gs.techAccess.science)}%</strong></div>
+      <div class="hud-stat">${_icon('culture','#c04ce9')} Culture: <strong>${Math.round(gs.techAccess.culture)}%</strong></div>
+
+      <div class="hud-divider"></div>
+
+      <div class="hud-stat">${_icon('robots_construct','#a07cf0')} Build robots: <strong>${gs.constructionRobots || 0}</strong></div>
     `;
   }
 
@@ -205,9 +212,11 @@ const UI = (() => {
           <div class="planet-anomalies">
             <div class="anomaly-header">Anomalies Detected</div>
             ${anomalies.map(a => {
-              const icon = a.positive === true ? '✦' : a.positive === false ? '⚠' : '◈';
+              const iconName = a.positive === true ? 'star4' : a.positive === false ? 'warning_tri' : 'diamond_mix';
+              const iconColor = a.positive === true ? '#4ce9a0' : a.positive === false ? '#e94560' : '#f0c040';
+              const iconImg = `<img class="pixel-icon-inline" src="${Renderer.getIcon(iconName, iconColor)}" alt="">`;
               const cls2 = a.positive === true ? 'anomaly-positive' : a.positive === false ? 'anomaly-negative' : 'anomaly-mixed';
-              return `<div class="anomaly-item ${cls2}">${icon} <strong>${a.label}</strong><br><em>${a.desc}</em></div>`;
+              return `<div class="anomaly-item ${cls2}">${iconImg} <strong>${a.label}</strong><br><em>${a.desc}</em></div>`;
             }).join('')}
           </div>`;
       } else {
@@ -284,7 +293,7 @@ const UI = (() => {
       const div = document.createElement('div');
       div.className = 'build-item' + (canAfford ? '' : ' disabled');
       div.innerHTML = `
-        <span class="build-icon">${bdef.icon}</span>
+        <span class="build-icon"><img class="pixel-icon-build" src="${Renderer.getIcon(bdef.icon)}" alt=""></span>
         <div class="build-info">
           <div class="build-label">${bdef.label}</div>
           <div class="build-cost">${Object.entries(bdef.cost).map(([k,v]) => `${v} ${k}`).join(', ')}</div>
@@ -326,7 +335,7 @@ const UI = (() => {
       const div = document.createElement('div');
       div.className = 'tech-item' + (canResearch ? '' : ' disabled');
       div.innerHTML = `
-        <div class="tech-label">${node.label} ${node.requires_relic ? '💎' : ''}</div>
+        <div class="tech-label">${node.label} ${node.requires_relic ? `<img class="pixel-icon-inline" src="${Renderer.getIcon('relic','#f0a040')}" alt="">` : ''}</div>
         <div class="tech-cost">${node.cost_research_points} research pts</div>
         <div class="tech-desc">${node.desc}</div>
         ${blocked ? `<div class="tech-blocked">Requires: ${described.blockedReason.join('; ')}</div>` : ''}
@@ -348,10 +357,30 @@ const UI = (() => {
         if (!node) return;
         const p = document.createElement('p');
         p.className = 'tech-done';
-        p.textContent = '✓ ' + node.label;
+        p.innerHTML = `<img class="pixel-icon-inline" src="${Renderer.getIcon('check','#4ce9a0')}" alt=""> ${node.label}`;
         containerEl.appendChild(p);
       });
     }
+  }
+
+  // ---- Event art panel ----
+
+  function showEventArt(eventId, containerEl) {
+    if (!containerEl) return;
+    containerEl.innerHTML = '';
+    const w = containerEl.clientWidth  || 220;
+    const h = containerEl.clientHeight || 300;
+    const canvas = document.createElement('canvas');
+    canvas.id = 'event-art-canvas';
+    canvas.width  = w;
+    canvas.height = h;
+    canvas.style.display = 'block';
+    canvas.style.width  = '100%';
+    canvas.style.height = '100%';
+    canvas.style.imageRendering = 'pixelated';
+    containerEl.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    Renderer.drawEventArt(ctx, w, h, eventId, Date.now());
   }
 
   // ---- Phase indicator ----
@@ -437,5 +466,6 @@ const UI = (() => {
     setPhaseIndicator,
     showModal,
     renderMetaVault,
+    showEventArt,
   };
 })();

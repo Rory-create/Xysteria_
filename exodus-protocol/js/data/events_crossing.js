@@ -1,13 +1,13 @@
 // Events that can fire during The Crossing (Phase 1 — the interstellar journey).
 // Each event has: id, weight, prerequisites, narratives (array), choices (array).
 // choice.condition(ship) → bool (show this choice?)
-// choice.outcome(ship)   → { narrative: string, losses?: {colonists?,science?,culture?,engineering?,hull?,power?} }
+// choice.outcome(ship)   → { narrative: string, losses?: {...} }
 //
-// Balance notes (starting from 100% on all systems):
-// - "Safe" choices cost 15-25 points in one system
-// - "Risky" choices can save one system but sacrifice another, sometimes backfiring
-// - "Desperate" / last-resort choices are always available but expensive (30-60 pts)
-// - Colonist losses scale: minor 30-60, significant 80-130, catastrophic 150-250
+// Design principle (v0.0.4):
+// - DBs are passive resources to PROTECT, not spend. No choice deliberately consumes them.
+// - Events damage DBs as a consequence of bad outcomes, not as currency.
+// - Maintenance robots can be deployed on select events (50-60% succeed, 25% lose 1, 15% all lost).
+// - Colonist losses scale: minor 20-50, significant 60-120, catastrophic 130-200.
 
 const EventsCrossing = [
   {
@@ -36,19 +36,17 @@ const EventsCrossing = [
         },
       },
       {
-        id: 'shield_science',
+        id: 'shield_databases',
         label: 'Prioritize database shielding — protect accumulated knowledge',
-        condition: (ship) => ship.knowledge.science > 30,
+        condition: () => true,
         outcome: (ship) => {
-          const sciLoss      = 8 + Math.floor(Math.random() * 8);
-          const colonistLoss = 80 + Math.floor(Math.random() * 70);
-          const hullLoss     = 10 + Math.floor(Math.random() * 10);
-          Ship.damageSystem(ship, 'science', sciLoss);
+          const colonistLoss = 100 + Math.floor(Math.random() * 70);
+          const hullLoss     = 12 + Math.floor(Math.random() * 10);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.loseColonists(ship, colonistLoss);
           return {
-            narrative: `The databases survive mostly intact (science −${sciLoss}). But the outer cryo-rings were exposed to raw radiation. ${colonistLoss} colonists lost — the ones in the outer pods. Hull took secondary damage (−${hullLoss}).`,
-            losses: { science: sciLoss, hull: hullLoss, colonists: colonistLoss },
+            narrative: `Power diverted entirely to database shielding. The databases survive intact. But the outer cryo-rings were exposed to raw radiation. ${colonistLoss} colonists lost — the ones in the outer pods. Hull took secondary damage (−${hullLoss}).`,
+            losses: { hull: hullLoss, colonists: colonistLoss },
           };
         },
       },
@@ -57,17 +55,17 @@ const EventsCrossing = [
         label: 'No intervention — brace all systems, accept the damage',
         condition: () => true,
         outcome: (ship) => {
-          const sciLoss  = 20 + Math.floor(Math.random() * 15);
-          const engLoss  = 15 + Math.floor(Math.random() * 12);
-          const cultLoss = 10 + Math.floor(Math.random() * 10);
-          const colonistLoss = 40 + Math.floor(Math.random() * 40);
+          const sciLoss      = 20 + Math.floor(Math.random() * 15);
+          const cultLoss     = 15 + Math.floor(Math.random() * 12);
+          const hullLoss     = 10 + Math.floor(Math.random() * 10);
+          const colonistLoss = 50 + Math.floor(Math.random() * 50);
           Ship.damageSystem(ship, 'science', sciLoss);
-          Ship.damageSystem(ship, 'engineering', engLoss);
           Ship.damageSystem(ship, 'culture', cultLoss);
+          Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.loseColonists(ship, colonistLoss);
           return {
-            narrative: `Radiation burns through everything. Science DB ${sciLoss}% degraded. Engineering ${engLoss}% corrupted. Cultural archives ${cultLoss}% lost. ${colonistLoss} colonists in unshielded pods are dead. The ship drifts through the storm.`,
-            losses: { science: sciLoss, engineering: engLoss, culture: cultLoss, colonists: colonistLoss },
+            narrative: `Radiation burns through everything. Science DB ${sciLoss}% degraded. Cultural archives ${cultLoss}% corrupted. Hull scored by the storm (−${hullLoss}). ${colonistLoss} colonists in unshielded pods are dead. The ship drifts through the storm.`,
+            losses: { science: sciLoss, culture: cultLoss, hull: hullLoss, colonists: colonistLoss },
           };
         },
       },
@@ -101,19 +99,51 @@ const EventsCrossing = [
       },
       {
         id: 'navigate_slow',
-        label: 'Navigate carefully — use engineering precision to thread the gaps',
-        condition: (ship) => ship.knowledge.engineering > 35,
+        label: 'Thread the debris field carefully — slow and precise navigation',
+        condition: () => true,
         outcome: (ship) => {
-          const engLoss = 18 + Math.floor(Math.random() * 12);
-          const colonistLoss = 20 + Math.floor(Math.random() * 30);
-          const hullLoss = 5 + Math.floor(Math.random() * 8);
-          Ship.damageSystem(ship, 'engineering', engLoss);
+          const hullLoss     = 8 + Math.floor(Math.random() * 10);
+          const colonistLoss = 25 + Math.floor(Math.random() * 35);
           Ship.damageSystem(ship, 'hull', hullLoss);
           if (colonistLoss > 0) Ship.loseColonists(ship, colonistLoss);
           return {
-            narrative: `A painstaking path through the debris. Engineering expertise strained (−${engLoss} DB). ${colonistLoss} colonists lost to micro-impact cryo punctures before you clear the field. Hull integrity down ${hullLoss} from glancing blows.`,
-            losses: { engineering: engLoss, hull: hullLoss, colonists: colonistLoss },
+            narrative: `A painstaking path through the debris — hours of micro-corrections. Hull takes glancing impacts (−${hullLoss}). The extended transit strains cryo systems: ${colonistLoss} colonists lost to micro-impact punctures before you clear the field.`,
+            losses: { hull: hullLoss, colonists: colonistLoss },
           };
+        },
+      },
+      {
+        id: 'maintenance_robots',
+        label: 'Deploy robots for emergency hull patching during transit',
+        condition: (ship) => ship.maintenanceRobots > 0,
+        outcome: (ship) => {
+          const roll = Math.random();
+          if (roll < 0.60) {
+            const hullLoss = 8 + Math.floor(Math.random() * 8);
+            Ship.damageSystem(ship, 'hull', hullLoss);
+            return {
+              narrative: `Robots seal breaches as fast as they open. Hull integrity held to a minimum (−${hullLoss}). All robots return — scoured but functional.`,
+              losses: { hull: hullLoss },
+            };
+          } else if (roll < 0.85) {
+            Ship.loseRobots(ship, 'maintenance', 1);
+            const hullLoss = 15 + Math.floor(Math.random() * 10);
+            Ship.damageSystem(ship, 'hull', hullLoss);
+            return {
+              narrative: `One robot is lost to a large fragment impact. The rest hold the line. Hull damage contained (−${hullLoss}), but you're down one maintenance unit.`,
+              losses: { hull: hullLoss },
+            };
+          } else {
+            const hullLoss     = 28 + Math.floor(Math.random() * 15);
+            const colonistLoss = 40 + Math.floor(Math.random() * 30);
+            Ship.damageSystem(ship, 'hull', hullLoss);
+            Ship.loseColonists(ship, colonistLoss);
+            ship.maintenanceRobots = 0;
+            return {
+              narrative: `A boulder-sized fragment tears through the hull — all maintenance robots are destroyed in the breach. Hull severely damaged (−${hullLoss}). ${colonistLoss} colonists in the exposed sections are lost. No maintenance units remain.`,
+              losses: { hull: hullLoss, colonists: colonistLoss },
+            };
+          }
         },
       },
       {
@@ -121,15 +151,15 @@ const EventsCrossing = [
         label: 'Detour — go around the entire field, months of extra travel',
         condition: () => true,
         outcome: (ship) => {
-          const powerLoss = 28 + Math.floor(Math.random() * 17);
-          const cultLoss  = 18 + Math.floor(Math.random() * 12);
-          const colonistLoss = 30 + Math.floor(Math.random() * 30);
+          const powerLoss    = 28 + Math.floor(Math.random() * 17);
+          const colonistLoss = 40 + Math.floor(Math.random() * 30);
+          const hullLoss     = 5  + Math.floor(Math.random() * 8);
           Ship.damageSystem(ship, 'power', powerLoss);
-          Ship.damageSystem(ship, 'culture', cultLoss);
           Ship.loseColonists(ship, colonistLoss);
+          Ship.damageSystem(ship, 'hull', hullLoss);
           return {
-            narrative: `The detour adds seven months to the journey. Power reserves depleted by ${powerLoss} from extended cryo operation. ${colonistLoss} colonists die in the extended transit — cryo-sleep was not designed for this duration. Morale in the archive corrupts (−${cultLoss} culture DB).`,
-            losses: { power: powerLoss, culture: cultLoss, colonists: colonistLoss },
+            narrative: `The detour adds seven months to the journey. Power reserves depleted by ${powerLoss} from extended cryo operation. ${colonistLoss} colonists die in the extended transit. Hull microfractures accumulate from long-duration vibration (−${hullLoss}).`,
+            losses: { power: powerLoss, hull: hullLoss, colonists: colonistLoss },
           };
         },
       },
@@ -200,7 +230,7 @@ const EventsCrossing = [
             const cultLoss = 8 + Math.floor(Math.random() * 10);
             Ship.damageSystem(ship, 'culture', cultLoss);
             return {
-              narrative: `The passive scan reveals something deeply unsettling in the signal's structure — a record of civilizations, all ending the same way. The cultural archive logs it automatically. Colonist morale subroutines register the data (−${cultLoss} culture DB). You accelerate away.`,
+              narrative: `The passive scan reveals something deeply unsettling in the signal's structure — a record of civilizations, all ending the same way. The cultural archive logs it automatically. The data weighs on the system (−${cultLoss} culture DB). You accelerate away.`,
               losses: { culture: cultLoss },
             };
           }
@@ -232,7 +262,7 @@ const EventsCrossing = [
         label: 'Emergency refreeze — burn through power reserves to stabilize',
         condition: (ship) => ship.power > 20,
         outcome: (ship) => {
-          const powerLoss = 25 + Math.floor(Math.random() * 15);
+          const powerLoss    = 25 + Math.floor(Math.random() * 15);
           const colonistLoss = 60 + Math.floor(Math.random() * 50);
           Ship.damageSystem(ship, 'power', powerLoss);
           Ship.loseColonists(ship, colonistLoss);
@@ -243,18 +273,35 @@ const EventsCrossing = [
         },
       },
       {
-        id: 'engineering_repair',
-        label: 'Manual cryo repair — reroute the coolant lines by hand',
-        condition: (ship) => ship.knowledge.engineering > 40,
+        id: 'maintenance_robots',
+        label: 'Deploy maintenance robots to repair the chambers',
+        condition: (ship) => ship.maintenanceRobots > 0,
         outcome: (ship) => {
-          const engLoss = 22 + Math.floor(Math.random() * 15);
-          const colonistLoss = 50 + Math.floor(Math.random() * 60);
-          Ship.damageSystem(ship, 'engineering', engLoss);
-          Ship.loseColonists(ship, colonistLoss);
-          return {
-            narrative: `A frantic repair under lethal conditions. Engineering knowledge stripped to its limits (−${engLoss} DB) as you calculate repair sequences in seconds. ${colonistLoss} lost before the fix holds. You saved the rest.`,
-            losses: { engineering: engLoss, colonists: colonistLoss },
-          };
+          const roll = Math.random();
+          if (roll < 0.60) {
+            const colonistLoss = 20 + Math.floor(Math.random() * 20);
+            Ship.loseColonists(ship, colonistLoss);
+            return {
+              narrative: `The robots move fast. Coolant lines sealed, pod temperatures stabilized. All units return intact. ${colonistLoss} colonists lost before the fix held — unavoidable, but the rest survive.`,
+              losses: { colonists: colonistLoss },
+            };
+          } else if (roll < 0.85) {
+            Ship.loseRobots(ship, 'maintenance', 1);
+            const colonistLoss = 50 + Math.floor(Math.random() * 40);
+            Ship.loseColonists(ship, colonistLoss);
+            return {
+              narrative: `Partial repair. One maintenance unit is lost to a coolant line rupture. ${colonistLoss} colonists lost before the fix holds. The remaining robots return.`,
+              losses: { colonists: colonistLoss },
+            };
+          } else {
+            const colonistLoss = 120 + Math.floor(Math.random() * 60);
+            Ship.loseColonists(ship, colonistLoss);
+            ship.maintenanceRobots = 0;
+            return {
+              narrative: `A secondary explosion. All maintenance robots are destroyed in the repair attempt. The damage is partially contained — but ${colonistLoss} colonists are lost. The ship has no maintenance units remaining.`,
+              losses: { colonists: colonistLoss },
+            };
+          }
         },
       },
       {
@@ -302,7 +349,7 @@ const EventsCrossing = [
         condition: () => true,
         outcome: (ship) => {
           const cultLoss = 12 + Math.floor(Math.random() * 10);
-          const sciLoss  = 8 + Math.floor(Math.random() * 8);
+          const sciLoss  = 8  + Math.floor(Math.random() * 8);
           Ship.damageSystem(ship, 'culture', cultLoss);
           Ship.damageSystem(ship, 'science', sciLoss);
           return {
@@ -312,17 +359,15 @@ const EventsCrossing = [
         },
       },
       {
-        id: 'science_arbitrates',
-        label: 'Use science DB to cross-reference records against physical evidence',
-        condition: (ship) => ship.knowledge.science > 45,
+        id: 'verify_evidence',
+        label: 'Cross-reference records against physical evidence to find truth',
+        condition: () => true,
         outcome: (ship) => {
-          const sciLoss  = 20 + Math.floor(Math.random() * 12);
-          const cultLoss = 8 + Math.floor(Math.random() * 8);
-          Ship.damageSystem(ship, 'science', sciLoss);
+          const cultLoss = 5 + Math.floor(Math.random() * 8);
           Ship.damageSystem(ship, 'culture', cultLoss);
           return {
-            narrative: `Cross-referencing historical claims against physical records takes enormous computational overhead. Science DB strained (−${sciLoss}). Most conflicts resolved, some ambiguity remains (−${cultLoss} culture). A partial truth — but grounded.`,
-            losses: { science: sciLoss, culture: cultLoss },
+            narrative: `Cross-referencing historical claims against physical records takes time — but it works. Most conflicts resolved with minimal archive damage (−${cultLoss} culture DB). Some ambiguity remains. A partial truth, but grounded.`,
+            losses: { culture: cultLoss },
           };
         },
       },
@@ -357,25 +402,20 @@ const EventsCrossing = [
       {
         id: 'slingshot',
         label: 'Calculated slingshot — use the anomaly\'s gravity as a free boost',
-        condition: (ship) => ship.knowledge.engineering > 50,
+        condition: () => true,
         outcome: (ship) => {
-          if (Math.random() > 0.45) {
-            const engLoss = 8 + Math.floor(Math.random() * 8);
-            Ship.damageSystem(ship, 'engineering', engLoss);
+          if (Math.random() > 0.50) {
             return {
-              narrative: `The slingshot works. You emerge faster than before, on a slightly improved trajectory. The calculation required straining engineering subroutines (−${engLoss} DB) but no further losses. Sometimes the universe cooperates.`,
-              losses: { engineering: engLoss },
+              narrative: `The slingshot works. You emerge faster than before, on a slightly improved trajectory. The calculation was elegant — no further losses. Sometimes the universe cooperates.`,
             };
           } else {
-            const hullLoss  = 25 + Math.floor(Math.random() * 20);
-            const engLoss   = 18 + Math.floor(Math.random() * 12);
-            const colonistLoss = 40 + Math.floor(Math.random() * 40);
+            const hullLoss     = 25 + Math.floor(Math.random() * 20);
+            const colonistLoss = 50 + Math.floor(Math.random() * 40);
             Ship.damageSystem(ship, 'hull', hullLoss);
-            Ship.damageSystem(ship, 'engineering', engLoss);
             Ship.loseColonists(ship, colonistLoss);
             return {
-              narrative: `The slingshot miscalculates. Tidal stress tears through the outer hull (−${hullLoss}). Engineering systems buckle under the load (−${engLoss}). ${colonistLoss} colonists in the aft cryo-rings are lost to hull breach. The ship barely escapes.`,
-              losses: { hull: hullLoss, engineering: engLoss, colonists: colonistLoss },
+              narrative: `The slingshot miscalculates. Tidal stress tears through the outer hull (−${hullLoss}). ${colonistLoss} colonists in the aft cryo-rings are lost to hull breach. The ship barely escapes.`,
+              losses: { hull: hullLoss, colonists: colonistLoss },
             };
           }
         },
@@ -386,14 +426,14 @@ const EventsCrossing = [
         condition: () => true,
         outcome: (ship) => {
           const colonistLoss = 80 + Math.floor(Math.random() * 60);
-          const cultLoss     = 20 + Math.floor(Math.random() * 15);
-          const powerLoss    = 15 + Math.floor(Math.random() * 10);
+          const powerLoss    = 20 + Math.floor(Math.random() * 15);
+          const hullLoss     = 10 + Math.floor(Math.random() * 10);
           Ship.loseColonists(ship, colonistLoss);
-          Ship.damageSystem(ship, 'culture', cultLoss);
           Ship.damageSystem(ship, 'power', powerLoss);
+          Ship.damageSystem(ship, 'hull', hullLoss);
           return {
-            narrative: `Months of drift in the anomaly's wake. Cryo systems running past design tolerances lose ${colonistLoss} colonists. Power slowly drains (−${powerLoss}). The extended silence and uncertainty corrupts portions of the cultural archive (−${cultLoss}).`,
-            losses: { colonists: colonistLoss, culture: cultLoss, power: powerLoss },
+            narrative: `Months of drift in the anomaly's wake. Cryo systems running past design tolerances lose ${colonistLoss} colonists. Power slowly drains (−${powerLoss}). Hull stresses accumulate from sustained tidal forces (−${hullLoss}).`,
+            losses: { colonists: colonistLoss, power: powerLoss, hull: hullLoss },
           };
         },
       },
@@ -456,8 +496,8 @@ const EventsCrossing = [
               losses: { power: powerLoss },
             };
           } else {
-            const hullLoss  = 20 + Math.floor(Math.random() * 15);
-            const sciLoss   = 15 + Math.floor(Math.random() * 12);
+            const hullLoss     = 20 + Math.floor(Math.random() * 15);
+            const sciLoss      = 15 + Math.floor(Math.random() * 12);
             const colonistLoss = 50 + Math.floor(Math.random() * 50);
             Ship.damageSystem(ship, 'hull', hullLoss);
             Ship.damageSystem(ship, 'science', sciLoss);
@@ -483,20 +523,43 @@ const EventsCrossing = [
     ],
     choices: [
       {
-        id: 'emergency_repair_power',
-        label: 'Prioritize power grid — restore it first, let other systems suffer',
-        condition: (ship) => ship.knowledge.engineering > 30,
+        id: 'maintenance_robots',
+        label: 'Send maintenance robots into the failing sections',
+        condition: (ship) => ship.maintenanceRobots > 0,
         outcome: (ship) => {
-          const engLoss      = 22 + Math.floor(Math.random() * 13);
-          const hullLoss     = 15 + Math.floor(Math.random() * 10);
-          const colonistLoss = 35 + Math.floor(Math.random() * 35);
-          Ship.damageSystem(ship, 'engineering', engLoss);
-          Ship.damageSystem(ship, 'hull', hullLoss);
-          Ship.loseColonists(ship, colonistLoss);
-          return {
-            narrative: `Power restored in 4 hours. Engineering database strained to its limit (−${engLoss}). The hull fracture propagates further while you focus elsewhere (−${hullLoss}). ${colonistLoss} colonists in the affected cryo-sectors die before systems restabilize.`,
-            losses: { engineering: engLoss, hull: hullLoss, colonists: colonistLoss },
-          };
+          const roll = Math.random();
+          if (roll < 0.60) {
+            const hullLoss     = 8  + Math.floor(Math.random() * 7);
+            const colonistLoss = 20 + Math.floor(Math.random() * 20);
+            Ship.damageSystem(ship, 'hull', hullLoss);
+            Ship.loseColonists(ship, colonistLoss);
+            return {
+              narrative: `The robots contain the cascade. Critical systems restored within the hour. Hull stress left permanent micro-fractures (−${hullLoss}). ${colonistLoss} colonists lost in the initial breach before containment. All robots return.`,
+              losses: { hull: hullLoss, colonists: colonistLoss },
+            };
+          } else if (roll < 0.85) {
+            Ship.loseRobots(ship, 'maintenance', 1);
+            const powerLoss    = 15 + Math.floor(Math.random() * 12);
+            const colonistLoss = 40 + Math.floor(Math.random() * 30);
+            Ship.damageSystem(ship, 'power', powerLoss);
+            Ship.loseColonists(ship, colonistLoss);
+            return {
+              narrative: `Partial containment. One robot is consumed by the power surge. Power grid partly restored (−${powerLoss} reserves). ${colonistLoss} colonists lost. The rest holds.`,
+              losses: { power: powerLoss, colonists: colonistLoss },
+            };
+          } else {
+            const powerLoss    = 30 + Math.floor(Math.random() * 20);
+            const hullLoss     = 20 + Math.floor(Math.random() * 15);
+            const colonistLoss = 80 + Math.floor(Math.random() * 50);
+            Ship.damageSystem(ship, 'power', powerLoss);
+            Ship.damageSystem(ship, 'hull', hullLoss);
+            Ship.loseColonists(ship, colonistLoss);
+            ship.maintenanceRobots = 0;
+            return {
+              narrative: `Catastrophic. The cascade overwhelms the robots — all maintenance units destroyed. Power grid shattered (−${powerLoss}), hull buckles (−${hullLoss}), ${colonistLoss} colonists lost. No maintenance units remain.`,
+              losses: { power: powerLoss, hull: hullLoss, colonists: colonistLoss },
+            };
+          }
         },
       },
       {
@@ -522,14 +585,14 @@ const EventsCrossing = [
         condition: (ship) => ship.hull > 20,
         outcome: (ship) => {
           const cultLoss     = 15 + Math.floor(Math.random() * 12);
-          const engLoss      = 12 + Math.floor(Math.random() * 10);
+          const hullLoss     = 8  + Math.floor(Math.random() * 8);
           const colonistLoss = 90 + Math.floor(Math.random() * 60);
           Ship.damageSystem(ship, 'culture', cultLoss);
-          Ship.damageSystem(ship, 'engineering', engLoss);
+          Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.loseColonists(ship, colonistLoss);
           return {
-            narrative: `Total shutdown and cold restart. The cascade breaks — but ${colonistLoss} colonists are killed by cryo interruption during the power-off cycle. Engineering and cultural systems lose state in the restart (−${engLoss} engineering, −${cultLoss} culture). The ship comes back online, alone in the dark.`,
-            losses: { culture: cultLoss, engineering: engLoss, colonists: colonistLoss },
+            narrative: `Total shutdown and cold restart. The cascade breaks — but ${colonistLoss} colonists are killed by cryo interruption during the power-off cycle. Cultural systems lose state in the restart (−${cultLoss} culture DB). The restart stresses the hull (−${hullLoss}). The ship comes back online, alone in the dark.`,
+            losses: { culture: cultLoss, hull: hullLoss, colonists: colonistLoss },
           };
         },
       },

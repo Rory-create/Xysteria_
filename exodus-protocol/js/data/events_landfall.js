@@ -108,13 +108,16 @@ const EventsLandfall = [
     ],
     choices: [
       {
-        id: 'engineering_repair',
-        label: 'Emergency engineering repair',
-        condition: (gs) => gs.techAccess.engineering >= 40,
-        outcome: () => ({
-          narrative: 'Engineering teams patch it together. Systems restored in one turn. Materials consumed.',
-          resourceChanges: { materials: -20 },
-        }),
+        id: 'robot_repair',
+        label: 'Deploy construction robots for rapid repair',
+        condition: (gs) => gs.constructionRobots > 0,
+        outcome: (gs) => {
+          gs.constructionRobots = Math.max(0, gs.constructionRobots - 1);
+          return {
+            narrative: 'One construction robot is assigned to the repair. Systems restored in one turn. Robot returns functional.',
+            resourceChanges: {},
+          };
+        },
       },
       {
         id: 'cannibalise_building',
