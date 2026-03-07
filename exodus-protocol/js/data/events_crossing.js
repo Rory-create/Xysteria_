@@ -3,7 +3,7 @@
 // choice.condition(ship) → bool (show this choice?)
 // choice.outcome(ship)   → { narrative: string, losses?: {...} }
 //
-// Design principle (v0.0.4):
+// Design principle (v0.0.5):
 // - DBs are passive resources to PROTECT, not spend. No choice deliberately consumes them.
 // - Events damage DBs as a consequence of bad outcomes, not as currency.
 // - Maintenance robots can be deployed on select events (50-60% succeed, 25% lose 1, 15% all lost).
