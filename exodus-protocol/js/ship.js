@@ -67,9 +67,14 @@ const Ship = (() => {
   // At science=100 OR scanner level 3, readings are exact.
   // Scanner level reduces noise by 8 per level (max 24 at level 3).
 
+  // Each scanner level has a noise floor — the irreducible uncertainty that
+  // only a deployed probe can resolve. Science DB reduces noise from max (40)
+  // down toward the floor, but never below it without a probe.
+  // floors: basic=20, improved=12, advanced=5, deep-range=0
   function scanNoiseRange(science, scannerLevel = 0) {
-    const sciNoise = Math.round((1 - science / 100) * 40);
-    return Math.max(0, sciNoise - scannerLevel * 8);
+    const floors = [20, 12, 5, 0];
+    const floor = floors[Math.min(scannerLevel, 3)];
+    return Math.round(floor + (1 - science / 100) * (40 - floor));
   }
 
   function scanPlanet(planet, science, scannerLevel = 0) {

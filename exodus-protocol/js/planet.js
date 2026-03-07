@@ -243,11 +243,26 @@ const Planet = (() => {
   }
 
   // ---- Weighted random class ----
-  function rollClass() {
-    const total = Object.values(PLANET_CLASSES).reduce((s, c) => s + c.weight, 0);
-    let roll = Math.random() * total;
+  // Better scanners detect hospitable planets more reliably — hostile/barren worlds
+  // are filtered from consideration earlier in the search.
+  const SCANNER_ADJUSTMENTS = [
+    {},                                                        // level 0: no change
+    { excellent: 5,  habitable: 8,  barren: -5,  hostile: -8  },  // level 1
+    { excellent: 10, habitable: 15, barren: -10, hostile: -15 },  // level 2
+    { excellent: 15, habitable: 20, barren: -15, hostile: -18 },  // level 3
+  ];
+
+  function rollClass(scannerLevel = 0) {
+    const adj = SCANNER_ADJUSTMENTS[Math.min(scannerLevel, 3)] || {};
+    let total = 0;
+    const weights = {};
     for (const [name, cls] of Object.entries(PLANET_CLASSES)) {
-      roll -= cls.weight;
+      weights[name] = Math.max(1, cls.weight + (adj[name] || 0));
+      total += weights[name];
+    }
+    let roll = Math.random() * total;
+    for (const [name, w] of Object.entries(weights)) {
+      roll -= w;
       if (roll <= 0) return name;
     }
     return 'marginal';
@@ -267,8 +282,8 @@ const Planet = (() => {
 
   // ---- Generate a planet ----
 
-  function generate() {
-    const cls = rollClass();
+  function generate(scannerLevel = 0) {
+    const cls = rollClass(scannerLevel);
     const ranges = PLANET_CLASSES[cls].ranges;
     const attrs = {};
     for (const [attr, range] of Object.entries(ranges)) {

@@ -107,7 +107,7 @@ const Phase1 = (() => {
   // ---- Arrive at a new planet ----
 
   function arriveAtPlanet() {
-    currentPlanet = Planet.generate();
+    currentPlanet = Planet.generate(ship.scannerLevel);
     currentScanReadings = Ship.scanPlanet(currentPlanet, ship.knowledge.science, ship.scannerLevel);
     const noiseRange = Ship.scanNoiseRange(ship.knowledge.science, ship.scannerLevel);
     const planetDesc = Planet.describe(currentPlanet, currentScanReadings, noiseRange);
