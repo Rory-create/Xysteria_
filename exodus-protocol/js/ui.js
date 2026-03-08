@@ -138,19 +138,19 @@ const UI = (() => {
       <div class="hud-divider"></div>
 
       <div class="hud-section">
-        <div class="hud-label">Science DB</div>
+        <div class="hud-label">Science DB${ship.knowledge.science > 100 ? ' <span class="hud-enhanced">ENHANCED</span>' : ''}</div>
         <div class="hud-bar-wrap">
-          <div class="hud-bar science" style="width:${pct(ship.knowledge.science)}%"></div>
+          <div class="hud-bar science" style="width:${pct(ship.knowledge.science, 125)}%;${ship.knowledge.science > 100 ? 'background:linear-gradient(90deg,#f0e840,#c0a800)' : ''}"></div>
         </div>
-        <div class="hud-value">${Math.round(ship.knowledge.science)}%</div>
+        <div class="hud-value" style="${ship.knowledge.science > 100 ? 'color:#f0e840' : ''}">${Math.round(ship.knowledge.science)}%</div>
       </div>
 
       <div class="hud-section">
-        <div class="hud-label">Culture DB</div>
+        <div class="hud-label">Culture DB${ship.knowledge.culture > 100 ? ' <span class="hud-enhanced">ENHANCED</span>' : ''}</div>
         <div class="hud-bar-wrap">
-          <div class="hud-bar culture" style="width:${pct(ship.knowledge.culture)}%"></div>
+          <div class="hud-bar culture" style="width:${pct(ship.knowledge.culture, 125)}%;${ship.knowledge.culture > 100 ? 'background:linear-gradient(90deg,#f0c040,#c08000)' : ''}"></div>
         </div>
-        <div class="hud-value">${Math.round(ship.knowledge.culture)}%</div>
+        <div class="hud-value" style="${ship.knowledge.culture > 100 ? 'color:#f0c040' : ''}">${Math.round(ship.knowledge.culture)}%</div>
       </div>
 
       <div class="hud-section">
@@ -259,20 +259,34 @@ const UI = (() => {
       ? `<span class="planet-surveyed-badge">Probed</span>`
       : `<span class="planet-unsurveyed-badge">Unprobed</span>`;
 
+    const intelligentLifeHtml = planetDesc.intelligentLife
+      ? `<div class="planet-intelligent-life">◈ CIVILIZATION DETECTED — Technological signatures confirmed</div>`
+      : '';
+
     containerEl.innerHTML = `
       <canvas id="planet-portrait" width="96" height="96"></canvas>
       <div class="planet-name">${name} ${surveyedBadge}</div>
       <div class="planet-class">Class: ${cls}</div>
+      ${intelligentLifeHtml}
       <div class="planet-attrs">
-        ${Object.entries(attributes).map(([key, attr]) => `
-          <div class="planet-attr">
-            <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)} <span class="attr-value-num">${attr.rangeStr || attr.value}</span></div>
-            <div class="attr-bar-wrap">
-              <div class="attr-bar" style="width:${attr.value}%;background:${attrColor(key, attr.value)}"></div>
-            </div>
-            <div class="attr-label-detail">${attr.label}${attr.rangeStr ? ' <em>(estimated)</em>' : ''} — <em>${attr.desc}</em></div>
-          </div>
-        `).join('')}
+        ${Object.entries(attributes).map(([key, attr]) => {
+          if (attr.offline) {
+            return `
+              <div class="planet-attr planet-attr--offline">
+                <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)} <span class="attr-offline-tag">OFFLINE</span></div>
+                <div class="attr-bar-wrap"><div class="attr-bar attr-bar--offline" style="width:100%"></div></div>
+                <div class="attr-label-detail attr-offline-desc">${attr.desc}</div>
+              </div>`;
+          }
+          return `
+            <div class="planet-attr">
+              <div class="attr-label">${key.charAt(0).toUpperCase() + key.slice(1)} <span class="attr-value-num">${attr.rangeStr || attr.value}</span></div>
+              <div class="attr-bar-wrap">
+                <div class="attr-bar" style="width:${attr.value}%;background:${attrColor(key, attr.value)}"></div>
+              </div>
+              <div class="attr-label-detail">${attr.label}${attr.rangeStr ? ' <em>(estimated)</em>' : ''} — <em>${attr.desc}</em></div>
+            </div>`;
+        }).join('')}
       </div>
       ${anomalyHtml}
     `;

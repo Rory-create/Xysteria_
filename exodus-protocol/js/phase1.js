@@ -43,13 +43,13 @@ const Phase1 = (() => {
     if (checkGameOver()) return;
     ship.turnsElapsed += 1;
 
-    // Tick cryo viability — increases drain as journey lengthens
-    const viabilityDrain = 2 + Math.floor(ship.turnsElapsed * 0.05);
+    // Tick cryo viability — accelerates the longer the journey drags on
+    const viabilityDrain = 3 + Math.floor(ship.turnsElapsed * 0.12);
     ship.cryoViability = Math.max(0, ship.cryoViability - viabilityDrain);
     if (ship.cryoViability <= 0) {
-      const cryoLoss = 10 + Math.floor(Math.random() * 21);
+      const cryoLoss = 30 + Math.floor(Math.random() * 51);
       Ship.loseColonists(ship, cryoLoss);
-      UI.addNarrative(`<span class="narrative-critical">Cryo compartment failure. ${cryoLoss} colonists lost to decompression.</span>`, 'critical');
+      UI.addNarrative(`<span class="narrative-critical">Cryo compartment failure. ${cryoLoss} colonists lost to decompression. Systems are failing.</span>`, 'critical');
     }
 
     // Clear planet panel immediately, show generic deep-space art
@@ -122,11 +122,20 @@ const Phase1 = (() => {
   function arriveAtPlanet(preselectedPlanet = null) {
     currentPlanet = preselectedPlanet || Planet.generate(ship.scannerLevel);
 
-    // Flag: scanner damaged adds +10 noise floor for this scan
-    const scannerDamagedPenalty = ship.flags.scannerDamaged ? 10 : 0;
-    const effectiveScienceForNoise = Math.max(0, ship.knowledge.science - scannerDamagedPenalty * 2.5);
+    // Flag: scanner damaged adds noise penalty
+    const effectiveScienceForNoise = ship.flags.scannerDamaged
+      ? Math.max(0, ship.knowledge.science - 25)
+      : ship.knowledge.science;
     currentScanReadings = Ship.scanPlanet(currentPlanet, effectiveScienceForNoise, ship.scannerLevel);
     const noiseRange = Ship.scanNoiseRange(effectiveScienceForNoise, ship.scannerLevel);
+
+    // Apply offline sensors — null out readings for damaged sensor attributes
+    if (ship.damagedSensors && ship.damagedSensors.length > 0) {
+      for (const attr of ship.damagedSensors) {
+        currentScanReadings[attr] = null;
+      }
+    }
+
     const planetDesc = Planet.describe(currentPlanet, currentScanReadings, noiseRange);
 
     ship.planetsVisited += 1;
@@ -152,6 +161,17 @@ const Phase1 = (() => {
       ? 'Exterior sensors partially offline from hull breach. '
       : '';
     UI.addNarrative(`${scanNote}Sensors resolve a planet. Scanner array: <strong>${scannerLabels[ship.scannerLevel] || 'basic'}</strong>. ${scanQuality}`);
+
+    // Intelligent life — always visible from orbit
+    if (currentPlanet.intelligentLife) {
+      UI.addNarrative(`<span class="narrative-relic">◈ CIVILIZATION DETECTED — Technological signatures confirmed from orbit. Non-human construction visible on the surface. This planet is inhabited.</span>`, 'relic');
+    }
+
+    // Damaged sensors prompt
+    if (ship.damagedSensors && ship.damagedSensors.length > 0) {
+      const names = ship.damagedSensors.join(', ');
+      UI.addNarrative(`<span class="narrative-warning">⚠ Sensor array offline: ${names}. Deploy a probe to restore full readings.</span>`, 'warning');
+    }
 
     // Show anomaly hints (visible from orbit even without probe)
     if (currentPlanet.anomalies && currentPlanet.anomalies.length > 0) {
@@ -235,10 +255,15 @@ const Phase1 = (() => {
     currentPlanet.surveyed = true;
     currentPlanet.anomaliesRevealed = true;
 
+    // Probe clears all damaged sensors
+    const hadOfflineSensors = ship.damagedSensors && ship.damagedSensors.length > 0;
+    ship.damagedSensors = [];
+
     const planetDesc = Planet.describe(currentPlanet, currentScanReadings, 0); // noiseRange=0 → exact
     if (planetPanelEl) UI.renderPlanetPanel(planetDesc, planetPanelEl, true);
 
-    UI.addNarrative(`Probe deployed. Full sensor sweep complete. All readings resolved to exact values.`);
+    const sensorNote = hadOfflineSensors ? ' Offline sensor arrays recalibrated using probe telemetry.' : '';
+    UI.addNarrative(`Probe deployed. Full sensor sweep complete. All readings resolved to exact values.${sensorNote}`);
 
     // Reveal anomalies
     if (currentPlanet.anomalies && currentPlanet.anomalies.length > 0) {

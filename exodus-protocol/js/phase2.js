@@ -93,6 +93,23 @@ const Phase2 = (() => {
       }
     }
 
+    // Enhanced science DB (>100): grants an extra free tier-0 tech on arrival
+    if (techAccess.science > 100) {
+      const extraCandidates = Tech.getAvailableNodes(state.researchedTech, techAccess, unlockedRelics, allNodes)
+        .filter(n => n.tier === 0);
+      if (extraCandidates.length > 0) {
+        const bonus = extraCandidates[Math.floor(Math.random() * extraCandidates.length)];
+        Tech.research(bonus, state);
+        state.log.push({ turn: 0, text: `Enhanced science database: ${bonus.label} research downloaded on arrival.` });
+      }
+    }
+
+    // Enhanced culture DB (>100): morale bonus on arrival
+    if (techAccess.culture > 100) {
+      state.morale = Math.min(100, state.morale + 12);
+      state.log.push({ turn: 0, text: 'Enhanced cultural archive: colony morale elevated from rich heritage data.' });
+    }
+
     return state;
   }
 

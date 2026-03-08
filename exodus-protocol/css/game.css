@@ -487,6 +487,50 @@ html, body {
   letter-spacing: 0.03em;
 }
 
+/* Enhanced DB label */
+.hud-enhanced {
+  font-size: 10px;
+  color: #f0e840;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
+
+/* Intelligent life banner on planet panel */
+.planet-intelligent-life {
+  background: rgba(76, 233, 192, 0.12);
+  border: 1px solid #4ce9c0;
+  border-radius: 4px;
+  color: #4ce9c0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 5px 8px;
+  margin: 4px 0 6px;
+}
+
+/* Offline sensor attribute */
+.planet-attr--offline .attr-label { color: #e05050; }
+.attr-offline-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #e05050;
+  letter-spacing: 0.06em;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.attr-bar--offline {
+  background: repeating-linear-gradient(
+    90deg, #e05050 0px, #e05050 6px, #3a1a1a 6px, #3a1a1a 12px
+  ) !important;
+  opacity: 0.4;
+}
+.attr-offline-desc {
+  color: #e05050;
+  font-style: italic;
+  opacity: 0.8;
+}
+
 /* Heading choice panel */
 .heading-header {
   font-size: 12px;

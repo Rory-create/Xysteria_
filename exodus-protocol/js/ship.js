@@ -31,6 +31,7 @@ const Ship = (() => {
       _firstDamageTaken: false,
       cryoViability: 100,   // 0–100; ticks down each jump; at 0 colonists die per jump
       flags: {},            // consequence flags set by events, checked by later events/arrival
+      damagedSensors: [],   // attribute names with offline sensors e.g. ['atmosphere','water']
     };
   }
 
@@ -48,7 +49,18 @@ const Ship = (() => {
       const key = system === 'landing' ? 'landingSystems' : system;
       ship[key] = Math.max(0, ship[key] - amount);
     } else {
+      // Knowledge DBs are capped at 125 — can exceed 100 via good events
       ship.knowledge[system] = Math.max(0, ship.knowledge[system] - amount);
+    }
+  }
+
+  // Damage 1–2 random planet attribute sensors, marking them offline until probe clears them.
+  const ALL_SENSORS = ['atmosphere', 'gravity', 'temperature', 'water', 'resources', 'biosphere'];
+  function damageRandomSensor(ship, count = 1) {
+    const available = ALL_SENSORS.filter(s => !ship.damagedSensors.includes(s));
+    for (let i = 0; i < count && available.length > 0; i++) {
+      const idx = Math.floor(Math.random() * available.length);
+      ship.damagedSensors.push(available.splice(idx, 1)[0]);
     }
   }
 
@@ -130,6 +142,7 @@ const Ship = (() => {
   return {
     createDefault,
     damageSystem,
+    damageRandomSensor,
     loseColonists,
     loseRobots,
     scanPlanet,

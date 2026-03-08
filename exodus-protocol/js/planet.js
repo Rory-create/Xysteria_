@@ -298,11 +298,17 @@ const Planet = (() => {
     // Biosphere can also generate hostile life independently
     const hasHostileLife = attrs.biosphere > 60 && Math.random() > 0.4;
 
+    // Intelligent life — rare, only on worlds with substantial biosphere
+    const intelligentLifeEligible = (cls === 'excellent' || cls === 'habitable' || cls === 'marginal')
+      && attrs.biosphere > 45;
+    const hasIntelligentLife = intelligentLifeEligible && Math.random() > 0.88;
+
     const planet = {
       name: generateName(),
       class: cls,
       ...attrs,
       hostileLife: hasHostileLife,
+      intelligentLife: hasIntelligentLife,
       surveyed: false,
       anomalies: [],          // populated below
       anomaliesRevealed: false,
@@ -439,6 +445,10 @@ const Planet = (() => {
     const readings = scanReadings || planet;
 
     function buildAttr(val, table) {
+      // Null value = sensor offline
+      if (val === null || val === undefined) {
+        return { value: null, label: 'SENSOR OFFLINE', desc: 'Sensor array damaged. Deploy a probe to restore readings.', offline: true };
+      }
       const { label, desc } = getLabel(val, table);
       const entry = { value: val, label, desc };
       if (noiseRange > 0) {
@@ -452,6 +462,7 @@ const Planet = (() => {
     return {
       name: planet.name,
       class: planet.class,
+      intelligentLife: planet.intelligentLife || false,
       anomalies: planet.anomalies || [],
       anomaliesRevealed: planet.anomaliesRevealed || false,
       surveyed: planet.surveyed || false,

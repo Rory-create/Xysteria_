@@ -86,8 +86,9 @@ const EventsCrossing = [
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.loseColonists(ship, colonistLoss);
           ship.flags.scannerDamaged = true;
+          Ship.damageRandomSensor(ship, 2);
           return {
-            narrative: `Radiation burns through everything. Science DB ${sciLoss}% degraded. Cultural archives ${cultLoss}% corrupted. Hull scored by the storm (−${hullLoss}). ${colonistLoss} colonists in unshielded pods are dead. Sensor arrays fried by the exposure — next scan will be noisy.`,
+            narrative: `Radiation burns through everything. Science DB ${sciLoss}% degraded. Cultural archives ${cultLoss}% corrupted. Hull scored by the storm (−${hullLoss}). ${colonistLoss} colonists in unshielded pods are dead. Sensor arrays fried — two planetary sensor types offline until probed.`,
             losses: { science: sciLoss, culture: cultLoss, hull: hullLoss, colonists: colonistLoss },
           };
         },
@@ -228,7 +229,7 @@ const EventsCrossing = [
           const available = relics.filter(r => !alreadyHave.includes(r));
           if (available.length === 0) {
             const sciGain = 12 + Math.floor(Math.random() * 10);
-            ship.knowledge.science = Math.min(100, ship.knowledge.science + sciGain);
+            ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
             return {
               narrative: `The relic broadcasts its own recognition signal. The structure responds — not with material gifts, but with data. Science DB +${sciGain} as the exchange decodes alien engineering principles. The structure goes dark.`,
             };
@@ -294,7 +295,7 @@ const EventsCrossing = [
           const roll = Math.random();
           if (roll > 0.55) {
             const sciGain = 5 + Math.floor(Math.random() * 8);
-            ship.knowledge.science = Math.min(100, ship.knowledge.science + sciGain);
+            ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
             return {
               narrative: `Passive scans yield alien spectroscopy and structural data. Science DB improved by ${sciGain} as analysts decode the transmission. You leave it behind.`,
             };
@@ -595,8 +596,9 @@ const EventsCrossing = [
             Ship.damageSystem(ship, 'hull', hullLoss);
             Ship.damageSystem(ship, 'science', sciLoss);
             Ship.loseColonists(ship, colonistLoss);
+            Ship.damageRandomSensor(ship, 1);
             return {
-              narrative: `You nearly escape — but the fringe catches you anyway. Power burned (−${powerLoss}), hull breached (−${hullLoss}), science DB hit by an EMP burst (−${sciLoss}). ${colonistLoss} colonists in the aft section are lost to plasma exposure.`,
+              narrative: `You nearly escape — but the fringe catches you anyway. Power burned (−${powerLoss}), hull breached (−${hullLoss}), science DB hit by an EMP burst (−${sciLoss}). ${colonistLoss} colonists in the aft section are lost to plasma exposure. A sensor array is offline.`,
               losses: { power: powerLoss, hull: hullLoss, science: sciLoss, colonists: colonistLoss },
             };
           }
@@ -923,8 +925,9 @@ const EventsCrossing = [
             Ship.damageSystem(ship, s, dmg);
             return `${sysNames[s]} −${dmg}`;
           });
+          Ship.damageRandomSensor(ship, 1);
           return {
-            narrative: `No time to respond. The surge finds its own path. ${report.join(', ')}. The randomness of physics decided what matters.`,
+            narrative: `No time to respond. The surge finds its own path. ${report.join(', ')}. A planetary sensor array is also fried. The randomness of physics decided what matters.`,
           };
         },
       },
@@ -1218,8 +1221,8 @@ const EventsCrossing = [
         outcome: (ship) => {
           const sciGain  = 10 + Math.floor(Math.random() * 10);
           const cultGain = 5  + Math.floor(Math.random() * 8);
-          ship.knowledge.science = Math.min(100, ship.knowledge.science + sciGain);
-          ship.knowledge.culture = Math.min(100, ship.knowledge.culture + cultGain);
+          ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+          ship.knowledge.culture = Math.min(125, ship.knowledge.culture + cultGain);
           return {
             narrative: `Your science database provides a rigorous exchange framework. The response is precise, structured, generous. You gain scientific data (+${sciGain} Science DB) and cultural context (+${cultGain} Culture DB). First contact was always going to be this: two intelligences, carefully, together.`,
           };
@@ -1233,13 +1236,13 @@ const EventsCrossing = [
           const roll = Math.random();
           if (roll < 0.45) {
             const sciGain = 8 + Math.floor(Math.random() * 12);
-            ship.knowledge.science = Math.min(100, ship.knowledge.science + sciGain);
+            ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
             return {
               narrative: `A response returns. Mathematical at first. Then pattern-matched to early human broadcasting. Something has been listening for a long time. The exchange yields scientific data unattainable by any other means (+${sciGain} Science DB). Then silence.`,
             };
           } else if (roll < 0.75) {
             const cultGain = 8 + Math.floor(Math.random() * 10);
-            ship.knowledge.culture = Math.min(100, ship.knowledge.culture + cultGain);
+            ship.knowledge.culture = Math.min(125, ship.knowledge.culture + cultGain);
             return {
               narrative: `The exchange continues for hours. What comes back is not science — it is story. Recorded, catalogued, added to the cultural archive (+${cultGain} Culture DB). Whatever is out there wanted to be remembered. The transmission ends.`,
             };
@@ -1262,7 +1265,7 @@ const EventsCrossing = [
         outcome: (ship) => {
           if (Math.random() < 0.60) {
             const sciGain = 5 + Math.floor(Math.random() * 8);
-            ship.knowledge.science = Math.min(100, ship.knowledge.science + sciGain);
+            ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
             return {
               narrative: `Passive analysis yields a partial decode — spectral data, astronomical observations, a star atlas that predates human civilization. Science DB updated with alien astronomical records (+${sciGain}). The transmission repeats until you pass beyond reception range.`,
             };
@@ -1280,6 +1283,181 @@ const EventsCrossing = [
         outcome: () => ({
           narrative: 'No response sent. No acknowledgment. The signal continues for seventeen hours, then stops. Whether it noticed the silence or simply finished transmitting is impossible to determine. The void gives no answers.',
         }),
+      },
+    ],
+  },
+
+  // ---- ALIEN EVENTS (v0.0.7) ----
+
+  {
+    id: 'megastructure_sighting',
+    weight: 7,
+    label: 'Megastructure Detected',
+    narratives: [
+      'The sensor array resolves something impossible. A structure the size of a small moon — geometric, deliberate, dark. Not natural. Not human. Something built this. Something that had the time and the will to build it.',
+      'Long-range mass spectrometry flags an anomaly: an object of artificial density in orbit around a distant star. The scale of it takes a moment to process. Whoever made this could reshape a solar system.',
+      'Navigation computes the object\'s mass and trajectory. The numbers keep coming back wrong. Then you understand why: it\'s not a rock. It\'s a structure. And it\'s oriented — facing something.',
+    ],
+    choices: [
+      {
+        id: 'analyze_megastructure',
+        label: 'Full passive scan — spend hours analyzing the structure',
+        condition: () => true,
+        outcome: (ship) => {
+          const roll = Math.random();
+          if (roll < 0.55) {
+            const sciGain = 14 + Math.floor(Math.random() * 12);
+            ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+            return {
+              narrative: `Hours of analysis. The structure's material composition suggests engineering principles your databases have no framework for — until now. Science DB +${sciGain} from extrapolation alone. The civilization that built this has been gone for at least sixty thousand years. You are very, very far from being the first.`,
+            };
+          } else {
+            const cultGain = 10 + Math.floor(Math.random() * 10);
+            ship.knowledge.culture = Math.min(125, ship.knowledge.culture + cultGain);
+            return {
+              narrative: `The structure has markings. Your cultural database processes them in silence for eleven hours and then, without fanfare, recognizes them as a calendar. A record of something that happened. Culture DB +${cultGain}. Whatever happened to them, they wanted it remembered.`,
+            };
+          }
+        },
+      },
+      {
+        id: 'probe_megastructure',
+        label: 'Deploy a probe for close-range telemetry',
+        condition: (ship) => ship.probes > 0,
+        outcome: (ship) => {
+          ship.probes -= 1;
+          const roll = Math.random();
+          if (roll < 0.5) {
+            const relics = ['crystalline_memory_core', 'neural_network_shard'];
+            const available = relics.filter(r => !ship.relics.includes(r));
+            if (available.length > 0) {
+              const relic = available[Math.floor(Math.random() * available.length)];
+              ship.relics.push(relic);
+              return {
+                narrative: `The probe finds an aperture — a port of some kind. Something inside ejects a component that matches none of your known materials. The probe retrieves it. A relic recovered from inside a megastructure. Probe expended.`,
+                relic,
+              };
+            }
+          }
+          const sciGain = 18 + Math.floor(Math.random() * 15);
+          ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+          return {
+            narrative: `Close-range telemetry yields material science data that revises fundamental assumptions in your database. Science DB +${sciGain}. The probe returns intact. The structure ignores it entirely, as though it has been expecting visitors for millennia and this is not their first probe.`,
+          };
+        },
+      },
+      {
+        id: 'pass_megastructure',
+        label: 'Log its position and continue — the mission comes first',
+        condition: () => true,
+        outcome: () => ({
+          narrative: 'You record its coordinates and resume course. The colonists will know. Whoever builds their civilization here will know there were others before them. Whether that is a comfort or a warning is not for you to decide.',
+        }),
+      },
+    ],
+  },
+
+  {
+    id: 'alien_seed_pod',
+    weight: 8,
+    label: 'Alien Biological Object',
+    narratives: [
+      'Sensors detect an object on an interstellar trajectory — not moving like a rock. Slow spin, irregular density, carbon-organic shell. Something sent this out between the stars. Or something is inside it.',
+      'A dark oblong object crossing your path. Spectrometry returns: carbon lattice, complex organics, trace thermal signature. This is biological. This is alive.',
+      'Navigation flags an intercept trajectory with an unknown object. The database has no classification. The closest match is a seed pod — but nothing plants seeds across interstellar distances. Nothing from Earth, anyway.',
+    ],
+    choices: [
+      {
+        id: 'retrieve_pod',
+        label: 'Intercept and retrieve it — bring it aboard for analysis',
+        condition: () => true,
+        outcome: (ship) => {
+          const roll = Math.random();
+          if (roll < 0.50) {
+            const sciGain = 12 + Math.floor(Math.random() * 12);
+            ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+            return {
+              narrative: `The pod is inert inside. But the organic structure is extraordinary — self-repairing, multi-layered, built for geological timescales. Science DB +${sciGain} from biological analysis. Whatever was inside has already germinated somewhere ahead of you, launched on a different vector, millennia ago. You were retrieving the husk.`,
+            };
+          } else if (roll < 0.80) {
+            const hullLoss = 12 + Math.floor(Math.random() * 10);
+            Ship.damageSystem(ship, 'hull', hullLoss);
+            return {
+              narrative: `The pod ruptures on contact with the docking bay. Spores — or something like spores — coat the outer hull in a biological layer that takes days to remove with chemical agents. Hull integrity compromised by the adhesion and scraping required to clean it (−${hullLoss}). No scientific data recoverable.`,
+              losses: { hull: hullLoss },
+            };
+          } else {
+            const colonistLoss = 40 + Math.floor(Math.random() * 40);
+            const sciGain = 8 + Math.floor(Math.random() * 8);
+            ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+            Ship.loseColonists(ship, colonistLoss);
+            return {
+              narrative: `Something was alive inside. It isn't aggressive — it simply doesn't understand what a human is. The organism spreads through the ventilation before it's contained. ${colonistLoss} colonists die before full quarantine. The specimen yields significant biological data (+${sciGain} Science DB) before it's incinerated. The colonists died for knowledge of something that never knew they existed.`,
+              losses: { colonists: colonistLoss },
+            };
+          }
+        },
+      },
+      {
+        id: 'probe_pod',
+        label: 'Deploy a probe to analyze it remotely — no contact',
+        condition: (ship) => ship.probes > 0,
+        outcome: (ship) => {
+          ship.probes -= 1;
+          const sciGain = 10 + Math.floor(Math.random() * 10);
+          ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+          return {
+            narrative: `The probe gets excellent samples. Genetic material unlike anything in the database — but structured, purposeful. Science DB +${sciGain}. Probe expended. The pod continues on its billion-year journey without knowing it was briefly studied.`,
+          };
+        },
+      },
+      {
+        id: 'avoid_pod',
+        label: 'Change course — do not interact with unknown biological material',
+        condition: () => true,
+        outcome: () => ({
+          narrative: 'You alter trajectory to avoid contact. The object passes behind you, continuing wherever it was sent, by whoever sent it. The colonists will never know what was an arm\'s length away.',
+        }),
+      },
+    ],
+  },
+
+  {
+    id: 'modified_star',
+    weight: 6,
+    label: 'Artificially Modified Star System',
+    narratives: [
+      'Long-range spectroscopy of a nearby star system returns data that cannot be natural. The stellar spectra have been altered — narrow-band emission lines no fusion process produces. Something changed this star\'s output. Deliberately.',
+      'Deep radar resolves a distant solar system. The planets are wrong. Not just uninhabitable — geometrically wrong. Positions consistent only with deliberate orbital modification. This system was engineered.',
+      'The navigation database flags a gravitational anomaly ahead: a system with seven planets in perfect resonance — 1:2:4:8:16:32:64. Natural resonance chains don\'t do that. An intelligence arranged this.',
+    ],
+    choices: [
+      {
+        id: 'study_system',
+        label: 'Dedicate long-range sensor time to detailed study',
+        condition: () => true,
+        outcome: (ship) => {
+          const sciGain  = 12 + Math.floor(Math.random() * 12);
+          const cultGain = 6  + Math.floor(Math.random() * 8);
+          ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+          ship.knowledge.culture = Math.min(125, ship.knowledge.culture + cultGain);
+          ship.flags.derelictContacted = true;
+          return {
+            narrative: `What you find rewrites three sections of the science database (+${sciGain} Science DB). The engineers who modified this system left structural markers — a signature, perhaps deliberately, perhaps out of habit. They wanted to be known. Or they simply couldn't help it. Culture DB +${cultGain} from the philosophical implications alone.`,
+          };
+        },
+      },
+      {
+        id: 'log_and_continue',
+        label: 'Log detailed coordinates and continue — this is too far off course to investigate',
+        condition: () => true,
+        outcome: (ship) => {
+          const sciGain = 4 + Math.floor(Math.random() * 6);
+          ship.knowledge.science = Math.min(125, ship.knowledge.science + sciGain);
+          return {
+            narrative: `Coordinates logged with maximum precision. The colonists will have this data — if anyone ever builds ships capable of reaching it. Science DB +${sciGain} from passive observation. You continue on course. Some things are for later generations to understand.`,
+          };
+        },
       },
     ],
   },
