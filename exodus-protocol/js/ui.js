@@ -140,7 +140,7 @@ const UI = (() => {
       <div class="hud-section">
         <div class="hud-label">Science DB${ship.knowledge.science > 100 ? ' <span class="hud-enhanced">ENHANCED</span>' : ''}</div>
         <div class="hud-bar-wrap">
-          <div class="hud-bar science" style="width:${pct(ship.knowledge.science, 125)}%;${ship.knowledge.science > 100 ? 'background:linear-gradient(90deg,#f0e840,#c0a800)' : ''}"></div>
+          <div class="hud-bar science" style="width:${pct(Math.min(ship.knowledge.science, 100), 100)}%;${ship.knowledge.science > 100 ? 'background:linear-gradient(90deg,#f0e840,#c0a800)' : ''}"></div>
         </div>
         <div class="hud-value" style="${ship.knowledge.science > 100 ? 'color:#f0e840' : ''}">${Math.round(ship.knowledge.science)}%</div>
       </div>
@@ -148,7 +148,7 @@ const UI = (() => {
       <div class="hud-section">
         <div class="hud-label">Culture DB${ship.knowledge.culture > 100 ? ' <span class="hud-enhanced">ENHANCED</span>' : ''}</div>
         <div class="hud-bar-wrap">
-          <div class="hud-bar culture" style="width:${pct(ship.knowledge.culture, 125)}%;${ship.knowledge.culture > 100 ? 'background:linear-gradient(90deg,#f0c040,#c08000)' : ''}"></div>
+          <div class="hud-bar culture" style="width:${pct(Math.min(ship.knowledge.culture, 100), 100)}%;${ship.knowledge.culture > 100 ? 'background:linear-gradient(90deg,#f0c040,#c08000)' : ''}"></div>
         </div>
         <div class="hud-value" style="${ship.knowledge.culture > 100 ? 'color:#f0c040' : ''}">${Math.round(ship.knowledge.culture)}%</div>
       </div>
@@ -449,6 +449,8 @@ const UI = (() => {
         sensorLines = `<div class="heading-sensor heading-bypass-note">Navigational wake detected — bypass corridor. Cryo systems reprieve.</div>`;
       } else if (h.blocked) {
         sensorLines = `<div class="heading-sensor heading-blocked">Sensors degraded — no reliable data</div>`;
+      } else if (h.impressions.length === 0) {
+        sensorLines = `<div class="heading-sensor heading-blind">Basic scanner — no long-range data available</div>`;
       } else {
         sensorLines = h.impressions.map(line =>
           `<div class="heading-sensor">${line}</div>`

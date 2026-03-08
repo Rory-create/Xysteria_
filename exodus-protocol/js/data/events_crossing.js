@@ -716,7 +716,7 @@ const EventsCrossing = [
 
   {
     id: 'scanner_calibration',
-    weight: 10,
+    weight: 28,
     label: 'Scanner Enhancement Window',
     condition: (ship) => ship.scannerLevel < 3,
     narratives: [
@@ -754,6 +754,21 @@ const EventsCrossing = [
               narrative: `Manual recalibration attempted but the calibration drift is too complex to compensate without reference telemetry. Scanner remains at current settings. The window closes.`,
             };
           }
+        },
+      },
+      {
+        id: 'db_assisted_calibration',
+        label: 'Use science database algorithms to self-calibrate — reliable but costs science data',
+        tag: 'Science DB 60%+',
+        highlight: true,
+        condition: (ship) => ship.knowledge.science >= 60,
+        outcome: (ship) => {
+          ship.scannerLevel = Math.min(3, ship.scannerLevel + 1);
+          ship.knowledge.science = Math.max(0, ship.knowledge.science - 8);
+          const levels = ['basic', 'improved', 'advanced', 'deep-range'];
+          return {
+            narrative: `The science database's signal processing algorithms are adapted for scanner calibration. Array upgraded to ${levels[ship.scannerLevel]} resolution. Science DB −8% from repurposed data.`,
+          };
         },
       },
       {
@@ -1272,6 +1287,26 @@ const EventsCrossing = [
           } else {
             return {
               narrative: 'The pattern eludes complete decryption. Too many unknowns in the encoding. What is logged may be invaluable to a future civilization that has more context. You file it and move on.',
+            };
+          }
+        },
+      },
+      {
+        id: 'reverse_engineer_signal',
+        label: 'Reverse-engineer the transmission encoding to improve scanner resolution',
+        tag: 'Science DB 80%+',
+        highlight: true,
+        condition: (ship) => ship.knowledge.science >= 80 && ship.scannerLevel < 3,
+        outcome: (ship) => {
+          if (Math.random() < 0.60) {
+            ship.scannerLevel = Math.min(3, ship.scannerLevel + 1);
+            const levels = ['basic', 'improved', 'advanced', 'deep-range'];
+            return {
+              narrative: `The transmission encoding maps directly onto a known compression format — one theorized but never field-tested. Adapting it to the scanner array takes hours, but it works. Scanner upgraded to ${levels[ship.scannerLevel]} resolution.`,
+            };
+          } else {
+            return {
+              narrative: `The encoding is too alien to fully reverse-engineer without transmitting a handshake first. The attempt yields only static. The signal moves on without answering.`,
             };
           }
         },

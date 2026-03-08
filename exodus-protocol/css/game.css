@@ -773,6 +773,12 @@ html, body {
 .pixel-icon-inline { width: 10px; height: 10px; image-rendering: pixelated; vertical-align: middle; }
 .pixel-icon-build  { width: 16px; height: 16px; image-rendering: pixelated; }
 
+.heading-blind {
+  color: #6060a0;
+  font-style: italic;
+  opacity: 0.7;
+}
+
 /* Heading prognosis line */
 .heading-prognosis {
   font-size: 11px;

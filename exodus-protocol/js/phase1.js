@@ -73,9 +73,24 @@ const Phase1 = (() => {
     const candidate = ship._chosenCandidate || null;
     delete ship._chosenCandidate;
 
-    const event = Events.pickCrossingEvent(ship);
+    // Guaranteed scanner upgrade windows — ensure players encounter the mechanic
+    let event = null;
+    const scannerEvent = EventsCrossing.find(e => e.id === 'scanner_calibration');
+    if (scannerEvent) {
+      if (ship.turnsElapsed === 3 && ship.scannerLevel === 0) {
+        event = scannerEvent;
+      } else if (ship.turnsElapsed === 7 && ship.scannerLevel <= 1) {
+        event = scannerEvent;
+      }
+    }
+
+    if (!event) event = Events.pickCrossingEvent(ship);
     if (!event) { arriveAtPlanet(isReturn ? null : candidate); return; }
 
+    _presentEvent(event, isReturn, candidate);
+  }
+
+  function _presentEvent(event, isReturn, candidate) {
     // Peaceful jump — just narrative, no choices
     if (event.id === 'peaceful_jump' || event.choices.length === 0) {
       UI.addNarrative(Events.getEventNarrative(event), 'flavor');
@@ -360,9 +375,10 @@ const Phase1 = (() => {
       ship.power = Math.min(100, ship.power + powerGain);
       UI.addNarrative(`A geothermal vent array — not natural. Ancient infrastructure, still radiating heat. Thermal collectors engage. <strong>Power +${powerGain}%.</strong>`);
     } else if (signalType === 'em') {
-      if (Math.random() < 0.4) {
-        const relicOptions = ['nav_beacon', 'energy_lattice', 'cultural_archive'];
-        const relic = relicOptions[Math.floor(Math.random() * relicOptions.length)];
+      const relicPool = ['nav_beacon', 'energy_lattice', 'cultural_archive'];
+      const availableRelics = relicPool.filter(r => !ship.relics.includes(r));
+      if (availableRelics.length > 0 && Math.random() < 0.4) {
+        const relic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
         ship.relics.push(relic);
         UI.addNarrative(`<span class="narrative-relic">✦ The EM signature resolves into something remarkable — a functional relic of pre-collapse design. Relic acquired: ${relic.replace(/_/g, ' ')}.</span>`, 'relic');
       } else {

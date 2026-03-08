@@ -545,23 +545,23 @@ const Planet = (() => {
     const attrPool = ['atmosphere', 'temperature', 'gravity', 'water', 'resources', 'biosphere'];
     const sorted = [...attrPool].sort((a, b) => dangerScore(b, candidate[b]) - dangerScore(a, candidate[a]));
 
-    // Scanner 0–1: 1 impression (most diagnostic); scanner 2–3: 2 impressions
-    const count = scannerLevel >= 2 ? 2 : 1;
+    // Impression count scales with scanner level:
+    // 0 (basic): blind — no data  1: 1 attr  2: 2 attrs  3: 3 attrs
+    const count = scannerLevel >= 3 ? 3 : scannerLevel >= 2 ? 2 : scannerLevel >= 1 ? 1 : 0;
     const impressions = sorted.slice(0, count).map(attr =>
       getVagueImpression(attr, candidate[attr])
     );
 
     // ---- Prognosis ----
-    // Based on true planet grade, with a 30% noise rate at scanner < 3.
+    // Level 0: not shown. Level 1: 40% noise. Level 2: 20% noise. Level 3: exact.
     const grade = candidate.grade;
     const truePrognosis = (grade === 'A' || grade === 'B') ? 'promising'
                         : grade === 'C' ? 'mixed'
                         : 'bleak';
-    let prognosis;
-    if (scannerLevel >= 3) {
-      prognosis = truePrognosis; // deep-range scanner: always accurate
-    } else {
-      if (Math.random() < 0.30) {
+    let prognosis = null;
+    if (scannerLevel >= 1) {
+      const noiseChance = scannerLevel >= 3 ? 0 : scannerLevel >= 2 ? 0.20 : 0.40;
+      if (noiseChance > 0 && Math.random() < noiseChance) {
         const others = ['promising', 'mixed', 'bleak'].filter(p => p !== truePrognosis);
         prognosis = others[Math.floor(Math.random() * others.length)];
       } else {
