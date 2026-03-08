@@ -438,10 +438,16 @@ const UI = (() => {
     headings.forEach((h, idx) => {
       const labels = ['Alpha', 'Beta', 'Gamma'];
       const btn = document.createElement('button');
-      btn.className = 'choice-btn heading-btn';
+
+      let btnClass = 'choice-btn heading-btn';
+      if (h.signalType) btnClass += ' heading-signal';
+      else if (h.bypass) btnClass += ' heading-bypass';
+      btn.className = btnClass;
 
       let sensorLines;
-      if (h.blocked) {
+      if (h.bypass) {
+        sensorLines = `<div class="heading-sensor heading-bypass-note">Navigational wake detected — bypass corridor. Cryo systems reprieve.</div>`;
+      } else if (h.blocked) {
         sensorLines = `<div class="heading-sensor heading-blocked">Sensors degraded — no reliable data</div>`;
       } else {
         sensorLines = h.impressions.map(line =>
@@ -449,9 +455,20 @@ const UI = (() => {
         ).join('');
       }
 
+      const prognosisHtml = (!h.bypass && !h.blocked && h.prognosis)
+        ? `<div class="heading-prognosis heading-prognosis-${h.prognosis}">${h.prognosis.charAt(0).toUpperCase() + h.prognosis.slice(1)}</div>`
+        : '';
+
+      const signalLabels = { distress: '⚠ Distress beacon detected', thermal: '◈ Thermal anomaly signature', em: '◈ Unknown EM transmission' };
+      const signalHtml = h.signalType
+        ? `<div class="heading-signal-note">${signalLabels[h.signalType] || '◈ Anomalous signal'}</div>`
+        : '';
+
       btn.innerHTML = `
         <span class="heading-label">Vector ${labels[idx]}</span>
         ${sensorLines}
+        ${prognosisHtml}
+        ${signalHtml}
       `;
       btn.addEventListener('click', () => {
         choicesEl.innerHTML = '';

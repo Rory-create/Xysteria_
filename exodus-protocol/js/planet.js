@@ -525,24 +525,51 @@ const Planet = (() => {
   function peekPlanet(scannerLevel = 0, flags = {}) {
     const candidate = generate(scannerLevel);
 
-    // Scanner damaged: one random heading is blinded
+    // Scanner damaged: ~50% chance one heading is blinded
     if (flags.scannerDamaged && Math.random() < 0.5) {
-      return { candidate, impressions: [], blocked: true };
+      return { candidate, impressions: [], blocked: true, prognosis: null, signalType: null, bypass: false };
     }
 
-    // Scanner level 0–1: 1 impression; 2+: 2 impressions
-    const attrPool = ['water', 'temperature', 'atmosphere', 'resources', 'biosphere', 'gravity'];
-    // Shuffle
-    for (let i = attrPool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [attrPool[i], attrPool[j]] = [attrPool[j], attrPool[i]];
+    // ---- Diagnostic attribute selection ----
+    // Always lead with the attribute most critical to survival decisions.
+    // Lower danger score = mundane, higher = a reason to pause before settling.
+    function dangerScore(attr, val) {
+      if (attr === 'atmosphere')  return val < 30 ? (30 - val) * 3 : val > 85 ? (val - 85) * 2 : 0;
+      if (attr === 'temperature') return Math.abs(val - 50) * 2;
+      if (attr === 'gravity')     return Math.abs(val - 50) * 1.2;
+      if (attr === 'water')       return Math.max(0, 40 - val) * 1.5;
+      if (attr === 'biosphere')   return val > 55 ? (val - 55) * 1.5 : 0;
+      return 0; // resources: not survival-critical
     }
+
+    const attrPool = ['atmosphere', 'temperature', 'gravity', 'water', 'resources', 'biosphere'];
+    const sorted = [...attrPool].sort((a, b) => dangerScore(b, candidate[b]) - dangerScore(a, candidate[a]));
+
+    // Scanner 0–1: 1 impression (most diagnostic); scanner 2–3: 2 impressions
     const count = scannerLevel >= 2 ? 2 : 1;
-    const impressions = attrPool.slice(0, count).map(attr =>
+    const impressions = sorted.slice(0, count).map(attr =>
       getVagueImpression(attr, candidate[attr])
     );
 
-    return { candidate, impressions, blocked: false };
+    // ---- Prognosis ----
+    // Based on true planet grade, with a 30% noise rate at scanner < 3.
+    const grade = candidate.grade;
+    const truePrognosis = (grade === 'A' || grade === 'B') ? 'promising'
+                        : grade === 'C' ? 'mixed'
+                        : 'bleak';
+    let prognosis;
+    if (scannerLevel >= 3) {
+      prognosis = truePrognosis; // deep-range scanner: always accurate
+    } else {
+      if (Math.random() < 0.30) {
+        const others = ['promising', 'mixed', 'bleak'].filter(p => p !== truePrognosis);
+        prognosis = others[Math.floor(Math.random() * others.length)];
+      } else {
+        prognosis = truePrognosis;
+      }
+    }
+
+    return { candidate, impressions, blocked: false, prognosis, signalType: null, bypass: false };
   }
 
   return {

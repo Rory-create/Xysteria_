@@ -43,13 +43,19 @@ const Phase1 = (() => {
     if (checkGameOver()) return;
     ship.turnsElapsed += 1;
 
-    // Tick cryo viability — accelerates the longer the journey drags on
-    const viabilityDrain = 3 + Math.floor(ship.turnsElapsed * 0.12);
-    ship.cryoViability = Math.max(0, ship.cryoViability - viabilityDrain);
-    if (ship.cryoViability <= 0) {
-      const cryoLoss = 30 + Math.floor(Math.random() * 51);
-      Ship.loseColonists(ship, cryoLoss);
-      UI.addNarrative(`<span class="narrative-critical">Cryo compartment failure. ${cryoLoss} colonists lost to decompression. Systems are failing.</span>`, 'critical');
+    // Bypass route: skip cryo drain this jump (shortcut corridor, cryo systems get a reprieve)
+    if (ship._bypassRoute) {
+      delete ship._bypassRoute;
+      UI.addNarrative(`Navigational wake detected. Following the bypass corridor — cryo systems cycle down for a brief reprieve.`, 'flavor');
+    } else {
+      // Tick cryo viability — accelerates the longer the journey drags on
+      const viabilityDrain = 3 + Math.floor(ship.turnsElapsed * 0.12);
+      ship.cryoViability = Math.max(0, ship.cryoViability - viabilityDrain);
+      if (ship.cryoViability <= 0) {
+        const cryoLoss = 30 + Math.floor(Math.random() * 51);
+        Ship.loseColonists(ship, cryoLoss);
+        UI.addNarrative(`<span class="narrative-critical">Cryo compartment failure. ${cryoLoss} colonists lost to decompression. Systems are failing.</span>`, 'critical');
+      }
     }
 
     // Clear planet panel immediately, show generic deep-space art
@@ -120,6 +126,10 @@ const Phase1 = (() => {
   // ---- Arrive at a new planet ----
 
   function arriveAtPlanet(preselectedPlanet = null) {
+    // Consume signal type flag set by heading choice
+    const signalType = ship._signalType || null;
+    delete ship._signalType;
+
     currentPlanet = preselectedPlanet || Planet.generate(ship.scannerLevel);
 
     // Flag: scanner damaged adds noise penalty
@@ -144,6 +154,9 @@ const Phase1 = (() => {
     if (ship.flags.scannerDamaged) delete ship.flags.scannerDamaged;
 
     UI.addSeparator(`— Planet Detected: ${currentPlanet.name} —`);
+
+    // Resolve signal anomaly if heading carried one
+    if (signalType) handleSignalArrival(signalType);
 
     const scannerLabels = ['basic', 'improved', 'advanced', 'deep-range'];
     let scanQuality = noiseRange === 0
@@ -291,17 +304,74 @@ const Phase1 = (() => {
 
     UI.addNarrative(`You log ${currentPlanet.name} and push on.`, 'flavor');
 
-    // Show heading choice — player picks direction before jump
+    // Generate 3 heading candidates
     const headings = [
       Planet.peekPlanet(ship.scannerLevel, ship.flags),
       Planet.peekPlanet(ship.scannerLevel, ship.flags),
       Planet.peekPlanet(ship.scannerLevel, ship.flags),
     ];
 
+    // 15% chance one heading carries a signal anomaly
+    if (Math.random() < 0.15) {
+      const signalTypes = ['distress', 'thermal', 'em'];
+      const signalType = signalTypes[Math.floor(Math.random() * signalTypes.length)];
+      const signalIdx = Math.floor(Math.random() * 3);
+      headings[signalIdx] = { ...headings[signalIdx], signalType };
+    }
+
+    // 8% chance one heading (different from signal) is a bypass corridor — skips cryo drain
+    if (Math.random() < 0.08) {
+      const taken = headings.findIndex(h => h.signalType);
+      const available = [0, 1, 2].filter(i => i !== taken);
+      const bypassIdx = available[Math.floor(Math.random() * available.length)];
+      headings[bypassIdx] = {
+        candidate: Planet.generate(0),
+        impressions: [],
+        blocked: false,
+        prognosis: null,
+        signalType: null,
+        bypass: true,
+      };
+    }
+
     UI.showHeadingChoice(headings, ship, (chosenIdx) => {
-      ship._chosenCandidate = headings[chosenIdx].candidate;
+      const chosen = headings[chosenIdx];
+      ship._chosenCandidate = chosen.candidate;
+      if (chosen.signalType) ship._signalType = chosen.signalType;
+      if (chosen.bypass) ship._bypassRoute = true;
       doJump();
     });
+  }
+
+  // ---- Handle signal anomaly arrival outcomes ----
+
+  function handleSignalArrival(signalType) {
+    UI.addSeparator('— Signal Resolved —');
+    if (signalType === 'distress') {
+      if (ship.maintenanceRobots > 0) {
+        ship.maintenanceRobots -= 1;
+        ship.knowledge.science = Math.min(125, ship.knowledge.science + 8);
+        UI.addNarrative(`You locate the source — a derelict ark-class vessel, adrift for decades. Maintenance robots recover intact data cores. <strong>Science DB +8%.</strong>`);
+      } else {
+        UI.addNarrative(`The distress beacon leads to a derelict vessel. Without maintenance robots, you can do little but observe through long-range optics before proceeding.`);
+      }
+    } else if (signalType === 'thermal') {
+      const powerGain = 10 + Math.floor(Math.random() * 16);
+      ship.power = Math.min(100, ship.power + powerGain);
+      UI.addNarrative(`A geothermal vent array — not natural. Ancient infrastructure, still radiating heat. Thermal collectors engage. <strong>Power +${powerGain}%.</strong>`);
+    } else if (signalType === 'em') {
+      if (Math.random() < 0.4) {
+        const relicOptions = ['nav_beacon', 'energy_lattice', 'cultural_archive'];
+        const relic = relicOptions[Math.floor(Math.random() * relicOptions.length)];
+        ship.relics.push(relic);
+        UI.addNarrative(`<span class="narrative-relic">✦ The EM signature resolves into something remarkable — a functional relic of pre-collapse design. Relic acquired: ${relic.replace(/_/g, ' ')}.</span>`, 'relic');
+      } else {
+        const cultureGain = 8 + Math.floor(Math.random() * 9);
+        ship.knowledge.culture = Math.min(125, ship.knowledge.culture + cultureGain);
+        UI.addNarrative(`Encrypted cultural transmissions, still broadcasting. The translation algorithms parse fragments of a lost civilization's final archive. <strong>Culture DB +${cultureGain}%.</strong>`);
+      }
+    }
+    UI.updateHUD(ship, ship.planetsVisited);
   }
 
   // ---- Return to a previous planet (costs engineering DB) ----

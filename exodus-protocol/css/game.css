@@ -773,6 +773,39 @@ html, body {
 .pixel-icon-inline { width: 10px; height: 10px; image-rendering: pixelated; vertical-align: middle; }
 .pixel-icon-build  { width: 16px; height: 16px; image-rendering: pixelated; }
 
+/* Heading prognosis line */
+.heading-prognosis {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+.heading-prognosis-promising { color: #4caf82; }
+.heading-prognosis-mixed     { color: #e0a020; }
+.heading-prognosis-bleak     { color: #e05050; }
+
+/* Signal anomaly heading */
+.heading-btn.heading-signal {
+  border-left: 3px solid #e0a020;
+}
+.heading-signal-note {
+  font-size: 11px;
+  color: #e0a020;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Bypass route heading */
+.heading-btn.heading-bypass {
+  border-left: 3px solid #4caf82;
+}
+.heading-bypass-note {
+  font-size: 12px;
+  color: #4caf82;
+  font-style: italic;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg1); }
