@@ -54,8 +54,9 @@ const UI = (() => {
 
     choices.forEach((choice, idx) => {
       const btn = document.createElement('button');
-      btn.className = 'choice-btn';
-      btn.innerHTML = `<span class="choice-num">${idx + 1}.</span> ${choice.label}`;
+      btn.className = 'choice-btn' + (choice.highlight ? ' choice-highlight' : '');
+      const tagHtml = choice.tag ? ` <span class="choice-tag">[${choice.tag}]</span>` : '';
+      btn.innerHTML = `<span class="choice-num">${idx + 1}.</span> ${choice.label}${tagHtml}`;
       if (choice.condition && !choice.condition) btn.disabled = true;
       btn.addEventListener('click', () => {
         choicesEl.innerHTML = '';
@@ -124,6 +125,14 @@ const UI = (() => {
           <div class="hud-bar power" style="width:${pct(ship.power)}%"></div>
         </div>
         <div class="hud-value">${Math.round(ship.power)}%</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Cryo Integrity</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar" style="width:${pct(ship.cryoViability)}%;background:${ship.cryoViability > 60 ? '#4caf82' : ship.cryoViability > 30 ? '#e0a020' : '#e05050'}"></div>
+        </div>
+        <div class="hud-value" style="color:${ship.cryoViability > 60 ? '' : ship.cryoViability > 30 ? '#e0a020' : '#e05050'}">${Math.round(ship.cryoViability)}%${ship.cryoViability <= 30 ? ' ⚠' : ''}</div>
       </div>
 
       <div class="hud-divider"></div>
@@ -401,6 +410,43 @@ const UI = (() => {
     Renderer.drawEventArt(ctx, w, h, eventId, Date.now());
   }
 
+  // ---- Heading choice (shown before a jump after "Move on") ----
+
+  function showHeadingChoice(headings, ship, onChoose) {
+    if (!choicesEl) return;
+    choicesEl.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'heading-header';
+    header.textContent = 'Set heading — long-range sensors show:';
+    choicesEl.appendChild(header);
+
+    headings.forEach((h, idx) => {
+      const labels = ['Alpha', 'Beta', 'Gamma'];
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn heading-btn';
+
+      let sensorLines;
+      if (h.blocked) {
+        sensorLines = `<div class="heading-sensor heading-blocked">Sensors degraded — no reliable data</div>`;
+      } else {
+        sensorLines = h.impressions.map(line =>
+          `<div class="heading-sensor">${line}</div>`
+        ).join('');
+      }
+
+      btn.innerHTML = `
+        <span class="heading-label">Vector ${labels[idx]}</span>
+        ${sensorLines}
+      `;
+      btn.addEventListener('click', () => {
+        choicesEl.innerHTML = '';
+        onChoose(idx);
+      });
+      choicesEl.appendChild(btn);
+    });
+  }
+
   // ---- Phase indicator ----
 
   function setPhaseIndicator(text) {
@@ -486,5 +532,6 @@ const UI = (() => {
     showModal,
     renderMetaVault,
     showEventArt,
+    showHeadingChoice,
   };
 })();

@@ -38,7 +38,11 @@ const Events = (() => {
       e.id === 'peaceful_jump' ? { ...e, weight: peacefulWeight } : e
     );
 
-    return weightedPick(catalog);
+    return weightedPick(catalog, (e) => {
+      if (e.prerequisites && !e.prerequisites(ship)) return false;
+      if (e.condition && !e.condition(ship)) return false;
+      return true;
+    });
   }
 
   // ---- Pick a Landfall event ----

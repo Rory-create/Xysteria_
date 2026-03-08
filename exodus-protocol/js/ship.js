@@ -29,6 +29,8 @@ const Ship = (() => {
       turnsElapsed: 0,
       metaUpgrades,         // reference to active meta upgrades for this run
       _firstDamageTaken: false,
+      cryoViability: 100,   // 0–100; ticks down each jump; at 0 colonists die per jump
+      flags: {},            // consequence flags set by events, checked by later events/arrival
     };
   }
 

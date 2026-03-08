@@ -43,6 +43,15 @@ const Phase1 = (() => {
     if (checkGameOver()) return;
     ship.turnsElapsed += 1;
 
+    // Tick cryo viability — increases drain as journey lengthens
+    const viabilityDrain = 2 + Math.floor(ship.turnsElapsed * 0.05);
+    ship.cryoViability = Math.max(0, ship.cryoViability - viabilityDrain);
+    if (ship.cryoViability <= 0) {
+      const cryoLoss = 10 + Math.floor(Math.random() * 21);
+      Ship.loseColonists(ship, cryoLoss);
+      UI.addNarrative(`<span class="narrative-critical">Cryo compartment failure. ${cryoLoss} colonists lost to decompression.</span>`, 'critical');
+    }
+
     // Clear planet panel immediately, show generic deep-space art
     if (planetPanelEl) UI.showEventArt(null, planetPanelEl);
 
@@ -55,8 +64,11 @@ const Phase1 = (() => {
   }
 
   function _resolveJump(isReturn) {
+    const candidate = ship._chosenCandidate || null;
+    delete ship._chosenCandidate;
+
     const event = Events.pickCrossingEvent(ship);
-    if (!event) { arriveAtPlanet(); return; }
+    if (!event) { arriveAtPlanet(isReturn ? null : candidate); return; }
 
     // Peaceful jump — just narrative, no choices
     if (event.id === 'peaceful_jump' || event.choices.length === 0) {
@@ -64,7 +76,7 @@ const Phase1 = (() => {
       if (isReturn) {
         returnToBestPlanet();
       } else {
-        arriveAtPlanet();
+        arriveAtPlanet(candidate);
       }
       return;
     }
@@ -79,11 +91,12 @@ const Phase1 = (() => {
 
     const validChoices = Events.getValidChoices(event, ship);
     UI.showChoices(validChoices, (choice) => {
-      if (!choice) { arriveAtPlanet(); return; }
+      if (!choice) { arriveAtPlanet(isReturn ? null : candidate); return; }
       const result = choice.outcome(ship);
 
       // Apply relic find
       if (result.relic) {
+        ship.relics.push(result.relic);
         UI.addNarrative(`<span class="narrative-relic">✦ Relic acquired: ${result.relic.replace(/_/g, ' ')}</span>`, 'relic');
       }
 
@@ -99,32 +112,46 @@ const Phase1 = (() => {
       if (isReturn) {
         returnToBestPlanet();
       } else {
-        arriveAtPlanet();
+        arriveAtPlanet(candidate);
       }
     });
   }
 
   // ---- Arrive at a new planet ----
 
-  function arriveAtPlanet() {
-    currentPlanet = Planet.generate(ship.scannerLevel);
-    currentScanReadings = Ship.scanPlanet(currentPlanet, ship.knowledge.science, ship.scannerLevel);
-    const noiseRange = Ship.scanNoiseRange(ship.knowledge.science, ship.scannerLevel);
+  function arriveAtPlanet(preselectedPlanet = null) {
+    currentPlanet = preselectedPlanet || Planet.generate(ship.scannerLevel);
+
+    // Flag: scanner damaged adds +10 noise floor for this scan
+    const scannerDamagedPenalty = ship.flags.scannerDamaged ? 10 : 0;
+    const effectiveScienceForNoise = Math.max(0, ship.knowledge.science - scannerDamagedPenalty * 2.5);
+    currentScanReadings = Ship.scanPlanet(currentPlanet, effectiveScienceForNoise, ship.scannerLevel);
+    const noiseRange = Ship.scanNoiseRange(effectiveScienceForNoise, ship.scannerLevel);
     const planetDesc = Planet.describe(currentPlanet, currentScanReadings, noiseRange);
 
     ship.planetsVisited += 1;
 
+    // Clear scanner damaged flag after it has affected one scan
+    if (ship.flags.scannerDamaged) delete ship.flags.scannerDamaged;
+
     UI.addSeparator(`— Planet Detected: ${currentPlanet.name} —`);
 
     const scannerLabels = ['basic', 'improved', 'advanced', 'deep-range'];
-    const scanQuality = noiseRange === 0
+    let scanQuality = noiseRange === 0
       ? 'Readings are exact.'
       : noiseRange <= 8
       ? 'Readings are mostly reliable — some uncertainty remains.'
       : ship.knowledge.science < 50
       ? 'Readings are imprecise — the science database is damaged.'
       : 'Readings show a significant margin of uncertainty. A probe would resolve the exact values.';
-    UI.addNarrative(`Sensors resolve a planet. Scanner array: <strong>${scannerLabels[ship.scannerLevel] || 'basic'}</strong>. ${scanQuality}`);
+
+    // Flag: scanner damaged — prepend note to scan quality
+    const scanNote = preselectedPlanet
+      ? 'Heading confirmed. '
+      : ship.flags.hullBreached
+      ? 'Exterior sensors partially offline from hull breach. '
+      : '';
+    UI.addNarrative(`${scanNote}Sensors resolve a planet. Scanner array: <strong>${scannerLabels[ship.scannerLevel] || 'basic'}</strong>. ${scanQuality}`);
 
     // Show anomaly hints (visible from orbit even without probe)
     if (currentPlanet.anomalies && currentPlanet.anomalies.length > 0) {
@@ -235,11 +262,21 @@ const Phase1 = (() => {
   function skipPlanet() {
     // Record this planet for possible return
     bestPlanets.push({ ...currentPlanet });
-    // Keep only the 3 most recent for simplicity
     if (bestPlanets.length > 3) bestPlanets.shift();
 
-    UI.addNarrative(`You log ${currentPlanet.name} and push on. The jump drive spools up.`, 'flavor');
-    doJump();
+    UI.addNarrative(`You log ${currentPlanet.name} and push on.`, 'flavor');
+
+    // Show heading choice — player picks direction before jump
+    const headings = [
+      Planet.peekPlanet(ship.scannerLevel, ship.flags),
+      Planet.peekPlanet(ship.scannerLevel, ship.flags),
+      Planet.peekPlanet(ship.scannerLevel, ship.flags),
+    ];
+
+    UI.showHeadingChoice(headings, ship, (chosenIdx) => {
+      ship._chosenCandidate = headings[chosenIdx].candidate;
+      doJump();
+    });
   }
 
   // ---- Return to a previous planet (costs engineering DB) ----

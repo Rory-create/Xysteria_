@@ -466,12 +466,82 @@ const Planet = (() => {
     };
   }
 
+  // ---- Vague sensor impressions for heading choice ----
+  // Returns one prose sentence per attribute at low/mid/high tiers.
+
+  const VAGUE_IMPRESSIONS = {
+    atmosphere: [
+      [0,  35,  'minimal atmospheric signature — hostile surface conditions likely'],
+      [35, 65,  'moderate atmospheric readings — some habitability plausible'],
+      [65, 100, 'dense atmospheric envelope detected'],
+    ],
+    gravity:    [
+      [0,  30,  'low gravitational field — structural concerns anticipated'],
+      [30, 65,  'gravity near standard — no anomalous pull detected'],
+      [65, 100, 'elevated gravity signature — high-mass body'],
+    ],
+    temperature: [
+      [0,  30,  'extreme cold detected — thermal profile far below survivable range'],
+      [30, 70,  'temperate thermal band — surface conditions not immediately hostile'],
+      [70, 100, 'intense heat signature — surface temperatures exceed standard tolerances'],
+    ],
+    water:      [
+      [0,  25,  'negligible hydrosphere — surface appears arid'],
+      [25, 60,  'moderate water signatures — liquid presence possible'],
+      [60, 100, 'strong hydrosphere readings — significant liquid water indicated'],
+    ],
+    resources:  [
+      [0,  35,  'sparse mineral density — limited extraction potential'],
+      [35, 70,  'moderate resource index — standard deposit profile'],
+      [70, 100, 'elevated mineral density — rich deposit signatures'],
+    ],
+    biosphere:  [
+      [0,  20,  'no detectable biological activity'],
+      [20, 60,  'faint biosignatures — minor organic presence possible'],
+      [60, 100, 'strong biosignatures — active ecosystem likely'],
+    ],
+  };
+
+  function getVagueImpression(attr, value) {
+    const tiers = VAGUE_IMPRESSIONS[attr];
+    if (!tiers) return '';
+    for (const [min, max, text] of tiers) {
+      if (value >= min && value < max) return text;
+    }
+    return tiers[tiers.length - 1][2];
+  }
+
+  function peekPlanet(scannerLevel = 0, flags = {}) {
+    const candidate = generate(scannerLevel);
+
+    // Scanner damaged: one random heading is blinded
+    if (flags.scannerDamaged && Math.random() < 0.5) {
+      return { candidate, impressions: [], blocked: true };
+    }
+
+    // Scanner level 0–1: 1 impression; 2+: 2 impressions
+    const attrPool = ['water', 'temperature', 'atmosphere', 'resources', 'biosphere', 'gravity'];
+    // Shuffle
+    for (let i = attrPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [attrPool[i], attrPool[j]] = [attrPool[j], attrPool[i]];
+    }
+    const count = scannerLevel >= 2 ? 2 : 1;
+    const impressions = attrPool.slice(0, count).map(attr =>
+      getVagueImpression(attr, candidate[attr])
+    );
+
+    return { candidate, impressions, blocked: false };
+  }
+
   return {
     generate,
     gradeplanet,
     describe,
     getEnvironmentalHardships,
     generateAnomalies,
+    peekPlanet,
+    getVagueImpression,
     ANOMALY_POOL,
     getLabel,
     ATM_LABELS, GRAV_LABELS, TEMP_LABELS, WATER_LABELS, RES_LABELS, BIO_LABELS,

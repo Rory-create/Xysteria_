@@ -21,6 +21,22 @@ const EventsCrossing = [
     ],
     choices: [
       {
+        id: 'scanner_recal',
+        label: 'Recalibrate magnetic sensors to map the storm core — thread the safest corridor',
+        tag: 'Scanner Lv.2',
+        highlight: 'blue',
+        condition: (ship) => ship.scannerLevel >= 2,
+        outcome: (ship) => {
+          const sv       = Events.severity(ship);
+          const hullLoss = Math.round((8 + Math.floor(Math.random() * 6)) * sv);
+          Ship.damageSystem(ship, 'hull', hullLoss);
+          return {
+            narrative: `The scanner array maps the storm's magnetic topology in real time. You steer through the low-density corridor. Hull catches the edges (−${hullLoss}), but databases, power, and colonists are untouched. Precision pays.`,
+            losses: { hull: hullLoss },
+          };
+        },
+      },
+      {
         id: 'divert_hull',
         label: 'Reroute all power to hull plating — absorb the storm',
         condition: (ship) => ship.power > 25,
@@ -30,8 +46,9 @@ const EventsCrossing = [
           const powerLoss = Math.round((12 + Math.floor(Math.random() * 8))  * sv);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.damageSystem(ship, 'power', powerLoss);
+          ship.flags.scannerDamaged = true;
           return {
-            narrative: `Hull plating absorbs the worst of the storm. Hull integrity −${hullLoss}. Power reserves depleted by ${powerLoss} from continuous shield cycling. The colonists survive.`,
+            narrative: `Hull plating absorbs the worst of the storm. Hull integrity −${hullLoss}. Power reserves depleted by ${powerLoss} from continuous shield cycling. The colonists survive. Sensor arrays took stray radiation — they'll read noisy next transit.`,
             losses: { hull: hullLoss, power: powerLoss },
           };
         },
@@ -46,8 +63,10 @@ const EventsCrossing = [
           const hullLoss     = Math.round((12  + Math.floor(Math.random() * 10)) * sv);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.loseColonists(ship, colonistLoss);
+          ship.flags.scannerDamaged = true;
+          ship.flags.radiationSick = true;
           return {
-            narrative: `Power diverted entirely to database shielding. The databases survive intact. But the outer cryo-rings were exposed to raw radiation. ${colonistLoss} colonists lost — the ones in the outer pods. Hull took secondary damage (−${hullLoss}).`,
+            narrative: `Power diverted entirely to database shielding. The databases survive intact. But the outer cryo-rings were exposed to raw radiation. ${colonistLoss} colonists lost — the ones in the outer pods. Hull took secondary damage (−${hullLoss}). Survivors show radiation sickness symptoms. Scanner arrays are degraded from the exposure.`,
             losses: { hull: hullLoss, colonists: colonistLoss },
           };
         },
@@ -66,8 +85,9 @@ const EventsCrossing = [
           Ship.damageSystem(ship, 'culture', cultLoss);
           Ship.damageSystem(ship, 'hull', hullLoss);
           Ship.loseColonists(ship, colonistLoss);
+          ship.flags.scannerDamaged = true;
           return {
-            narrative: `Radiation burns through everything. Science DB ${sciLoss}% degraded. Cultural archives ${cultLoss}% corrupted. Hull scored by the storm (−${hullLoss}). ${colonistLoss} colonists in unshielded pods are dead. The ship drifts through the storm.`,
+            narrative: `Radiation burns through everything. Science DB ${sciLoss}% degraded. Cultural archives ${cultLoss}% corrupted. Hull scored by the storm (−${hullLoss}). ${colonistLoss} colonists in unshielded pods are dead. Sensor arrays fried by the exposure — next scan will be noisy.`,
             losses: { science: sciLoss, culture: cultLoss, hull: hullLoss, colonists: colonistLoss },
           };
         },
@@ -85,6 +105,21 @@ const EventsCrossing = [
       'Navigation failed to detect the field until you were already inside it. Rock and ice grind against the hull. Every second costs integrity.',
     ],
     choices: [
+      {
+        id: 'precision_trajectory',
+        label: 'Deep scan trajectory plot — thread the safe corridors between major fragments',
+        tag: 'Scanner Lv.2',
+        highlight: 'blue',
+        condition: (ship) => ship.scannerLevel >= 2,
+        outcome: (ship) => {
+          const hullLoss = 4 + Math.floor(Math.random() * 6);
+          Ship.damageSystem(ship, 'hull', hullLoss);
+          return {
+            narrative: `The scanner maps fragment trajectories in real time. You navigate the gaps precisely — minor glancing impacts (−${hullLoss} hull), no colonist exposure, no power burned. The field parts around you like it isn't even trying.`,
+            losses: { hull: hullLoss },
+          };
+        },
+      },
       {
         id: 'punch_through',
         label: 'Full thrust — punch straight through at maximum speed',
@@ -181,6 +216,38 @@ const EventsCrossing = [
       'Your cultural database flags a pattern in the signal. This same pattern was detected by three earlier probe ships. None of them reported back.',
     ],
     choices: [
+      {
+        id: 'relic_resonance',
+        label: 'Broadcast relic signal patterns — let your recovered artifact answer',
+        tag: 'Relic',
+        highlight: 'blue',
+        condition: (ship) => ship.relics.length >= 1,
+        outcome: (ship) => {
+          const relics = ['crystalline_memory_core', 'biotech_seedpod', 'power_conduit_fragment', 'neural_network_shard'];
+          const alreadyHave = ship.relics;
+          const available = relics.filter(r => !alreadyHave.includes(r));
+          if (available.length === 0) {
+            const sciGain = 12 + Math.floor(Math.random() * 10);
+            ship.knowledge.science = Math.min(100, ship.knowledge.science + sciGain);
+            return {
+              narrative: `The relic broadcasts its own recognition signal. The structure responds — not with material gifts, but with data. Science DB +${sciGain} as the exchange decodes alien engineering principles. The structure goes dark.`,
+            };
+          }
+          const relic = available[Math.floor(Math.random() * available.length)];
+          ship.relics.push(relic);
+          ship.flags.derelictContacted = true;
+          const names = {
+            crystalline_memory_core: 'Crystalline Memory Core',
+            biotech_seedpod: 'Biotech Seedpod',
+            power_conduit_fragment: 'Power Conduit Fragment',
+            neural_network_shard: 'Neural Network Shard',
+          };
+          return {
+            narrative: `The relic resonates with the signal. The structure recognizes it — opens. A second artifact emerges from the structure on its own trajectory, intercepted without risk or probe expenditure: a ${names[relic]}.`,
+            relic,
+          };
+        },
+      },
       {
         id: 'investigate_relic',
         label: 'Send a probe to investigate — risk a probe to find out',
@@ -307,6 +374,22 @@ const EventsCrossing = [
               losses: { colonists: colonistLoss },
             };
           }
+        },
+      },
+      {
+        id: 'cultural_calm',
+        label: 'Broadcast heritage recordings through the cryo PA — use cultural archives to calm bio-stress responses',
+        tag: 'Culture DB 70%+',
+        highlight: 'blue',
+        condition: (ship) => ship.knowledge.culture >= 70,
+        outcome: (ship) => {
+          const colonistLoss = 25 + Math.floor(Math.random() * 25);
+          Ship.loseColonists(ship, colonistLoss);
+          ship.cryoViability = Math.min(100, (ship.cryoViability || 0) + 10);
+          return {
+            narrative: `The cultural database contains emergency biofeedback protocols — music, voices, environmental recordings calibrated to reduce metabolic stress during cryo instability. ${colonistLoss} colonists lost to the initial failure before the broadcasts stabilize the rest. Cryo system integrity partially recovered from reduced stress loads (+10 Cryo Integrity).`,
+            losses: { colonists: colonistLoss },
+          };
         },
       },
       {
@@ -567,8 +650,9 @@ const EventsCrossing = [
             Ship.damageSystem(ship, 'landing', landingLoss);
             Ship.loseColonists(ship, colonistLoss);
             ship.maintenanceRobots = 0;
+            ship.flags.hullBreached = true;
             return {
-              narrative: `Catastrophic. The cascade overwhelms the robots — all maintenance units destroyed. Power grid shattered (−${powerLoss}), hull buckles (−${hullLoss}), landing systems torn by explosive decompression (−${landingLoss}), ${colonistLoss} colonists lost. No maintenance units remain.`,
+              narrative: `Catastrophic. The cascade overwhelms the robots — all maintenance units destroyed. Power grid shattered (−${powerLoss}), hull buckles (−${hullLoss}), landing systems torn by explosive decompression (−${landingLoss}), ${colonistLoss} colonists lost. Hull breach recorded — exterior sensors are compromised.`,
               losses: { power: powerLoss, hull: hullLoss, colonists: colonistLoss },
             };
           }
@@ -1126,6 +1210,22 @@ const EventsCrossing = [
     ],
     choices: [
       {
+        id: 'scientific_protocol',
+        label: 'Structured scientific exchange — broadcast mathematical primes, decode the response systematically',
+        tag: 'Science DB 75%+',
+        highlight: 'blue',
+        condition: (ship) => ship.knowledge.science >= 75,
+        outcome: (ship) => {
+          const sciGain  = 10 + Math.floor(Math.random() * 10);
+          const cultGain = 5  + Math.floor(Math.random() * 8);
+          ship.knowledge.science = Math.min(100, ship.knowledge.science + sciGain);
+          ship.knowledge.culture = Math.min(100, ship.knowledge.culture + cultGain);
+          return {
+            narrative: `Your science database provides a rigorous exchange framework. The response is precise, structured, generous. You gain scientific data (+${sciGain} Science DB) and cultural context (+${cultGain} Culture DB). First contact was always going to be this: two intelligences, carefully, together.`,
+          };
+        },
+      },
+      {
         id: 'respond',
         label: 'Respond with our own signal — initiate first contact protocol',
         condition: () => true,
@@ -1179,6 +1279,120 @@ const EventsCrossing = [
         condition: () => true,
         outcome: () => ({
           narrative: 'No response sent. No acknowledgment. The signal continues for seventeen hours, then stops. Whether it noticed the silence or simply finished transmitting is impossible to determine. The void gives no answers.',
+        }),
+      },
+    ],
+  },
+
+  // ---- FLAG-GATED EVENTS ----
+
+  {
+    id: 'radiation_aftermath',
+    weight: 30,  // high weight but only fires if flag is set
+    label: 'Radiation Sickness Spreading',
+    prerequisites: (ship) => !!ship.flags.radiationSick,
+    narratives: [
+      'Biosensors flag elevated radiation markers across multiple cryo-ring sectors. The colonists exposed in the last storm are deteriorating faster than projected. You have a narrow window to intervene.',
+      'Medical diagnostics confirm it: the colonists caught in the outer pods during the storm are sick. Radiation poisoning progressing through the cryo population. The next transit will decide how many survive.',
+    ],
+    choices: [
+      {
+        id: 'robot_treatment',
+        label: 'Deploy maintenance robots for emergency medical triage of affected pods',
+        condition: (ship) => ship.maintenanceRobots > 0,
+        outcome: (ship) => {
+          ship.flags.radiationSick = false;
+          const colonistLoss = 20 + Math.floor(Math.random() * 30);
+          Ship.loseColonists(ship, colonistLoss);
+          return {
+            narrative: `Robots administer emergency shielding and metabolic suppressants to the worst cases. ${colonistLoss} colonists lost — the ones too far gone. The rest stabilize. Radiation sickness contained.`,
+            losses: { colonists: colonistLoss },
+          };
+        },
+      },
+      {
+        id: 'power_treatment',
+        label: 'Burn power reserves to run localized cryo-ring decontamination protocols',
+        condition: (ship) => ship.power > 20,
+        outcome: (ship) => {
+          ship.flags.radiationSick = false;
+          const powerLoss    = 18 + Math.floor(Math.random() * 12);
+          const colonistLoss = 35 + Math.floor(Math.random() * 30);
+          Ship.damageSystem(ship, 'power', powerLoss);
+          Ship.loseColonists(ship, colonistLoss);
+          return {
+            narrative: `Decontamination cycles run continuously for thirty hours, burning power reserves (−${powerLoss}). ${colonistLoss} colonists lost before the protocol completes. The survivors' biosensors clear. Radiation sickness resolved.`,
+            losses: { power: powerLoss, colonists: colonistLoss },
+          };
+        },
+      },
+      {
+        id: 'accept_losses',
+        label: 'No resources available — monitor and accept the losses',
+        condition: () => true,
+        outcome: (ship) => {
+          const colonistLoss = 80 + Math.floor(Math.random() * 60);
+          Ship.loseColonists(ship, colonistLoss);
+          // Flag persists — another chance next event if still resources
+          ship.flags.radiationSick = false;
+          return {
+            narrative: `Without treatment options, the radiation progresses unchecked. ${colonistLoss} colonists die over the next transit. The biosensors eventually clear — not because they were cured, but because the affected population is gone.`,
+            losses: { colonists: colonistLoss },
+          };
+        },
+      },
+    ],
+  },
+
+  {
+    id: 'cryo_resupply',
+    weight: 10,
+    label: 'Dormant Supply Cache',
+    prerequisites: (ship) => ship.cryoViability <= 55,
+    narratives: [
+      'A beacon signal — pre-collapse, human-origin — leads you to a dormant cache platform. The colony planning program launched these ahead of the main ships. This one made it. The cryo-ring components inside are still viable.',
+      'Passive sensors detect a familiar spectral signature: human alloys, cold and intact. A pre-positioned supply cache from the advance program. Cryo-ring components. Exactly what you need.',
+    ],
+    choices: [
+      {
+        id: 'salvage_cryo',
+        label: 'Dock and salvage cryo components — restore integrity to the sleep chambers',
+        condition: () => true,
+        outcome: (ship) => {
+          const hullLoss   = 5 + Math.floor(Math.random() * 6);
+          const cryoGain   = 15 + Math.floor(Math.random() * 15);
+          Ship.damageSystem(ship, 'hull', hullLoss);
+          ship.cryoViability = Math.min(100, ship.cryoViability + cryoGain);
+          return {
+            narrative: `Docking successful. Cryo-ring components transferred and installed — a significant integrity restoration (+${cryoGain} Cryo Integrity). Minor hull scuffing from the docking maneuver (−${hullLoss}). Someone planned for this. The colonists sleep better now.`,
+            losses: { hull: hullLoss },
+          };
+        },
+      },
+      {
+        id: 'probe_cache',
+        label: 'Deploy a probe to check for additional supplies before docking',
+        condition: (ship) => ship.probes > 0,
+        outcome: (ship) => {
+          ship.probes -= 1;
+          const cryoGain = 20 + Math.floor(Math.random() * 15);
+          ship.cryoViability = Math.min(100, ship.cryoViability + cryoGain);
+          let extra = '';
+          if (Math.random() < 0.45) {
+            ship.maintenanceRobots += 1;
+            extra = ' The probe also finds a dormant maintenance unit — repaired and integrated into the ship\'s complement.';
+          }
+          return {
+            narrative: `Probe confirms full cache integrity. Docking proceeds safely. Cryo components installed (+${cryoGain} Cryo Integrity).${extra} Probe expended.`,
+          };
+        },
+      },
+      {
+        id: 'pass_cache',
+        label: 'The risk of docking is not worth it — continue on course',
+        condition: () => true,
+        outcome: () => ({
+          narrative: 'The beacon fades. Whatever was there remains in the dark, waiting for a ship that will not come. You stay on course. The cryo systems continue their slow decline.',
         }),
       },
     ],
